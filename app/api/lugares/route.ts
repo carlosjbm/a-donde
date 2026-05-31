@@ -15,10 +15,10 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { nombre, descripcion, direccion, latitud, longitud, categoria_id, usuario_id } = body;
+    const { nombre, descripcion, direccion, latitud, longitud } = body;
 
-    if (!nombre || !direccion || !categoria_id || !usuario_id) {
-      return errorResponse("Nombre, direccion, categoria_id y usuario_id son obligatorios");
+    if (!nombre || !direccion) {
+      return errorResponse("Nombre y dirección son obligatorios");
     }
 
     const lugar = await lugarModel.create({
@@ -27,8 +27,6 @@ export async function POST(request: NextRequest) {
       direccion,
       latitud: latitud || null,
       longitud: longitud || null,
-      categoria_id,
-      usuario_id,
     });
     return successResponse(lugar, 201);
   } catch (error) {

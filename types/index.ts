@@ -15,8 +15,6 @@ export interface Lugar {
   direccion: string;
   latitud: number | null;
   longitud: number | null;
-  categoria_id: number;
-  usuario_id: number;
   created_at: string;
   updated_at: string;
 }
@@ -35,4 +33,27 @@ export interface Presupuesto{
   created_date:Date,
   valor:number,
   user_id:number
+}
+
+export interface Producto {
+  id: number;
+  nombre: string;
+  precio: number;
+  id_lugar: number;
+  escencial: boolean;
+  imagen: string | null;
+  id_categ: number;
+}
+
+export interface Compra {
+  id: number;
+  create_at: string;
+  observacion: string;
+  id_producto: number;
+  user_id: number;
+}
+
+export interface CompraConProducto extends Compra {
+  producto_nombre: string;
+  producto_precio: number;
 }
