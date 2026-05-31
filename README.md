@@ -1,36 +1,84 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# a-donde
 
-## Getting Started
+Plataforma para descubrir y compartir lugares con recomendaciones cercanas.
 
-First, run the development server:
+## Stack
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+- **Framework:** Next.js 16 (App Router)
+- **Lenguaje:** TypeScript
+- **UI:** React 19, Tailwind CSS 4
+- **Base de datos:** MySQL (mysql2)
+- **Autenticación:** bcrypt + jose (JWT) + refresh tokens
+- **Validación:** Zod
+
+## Requisitos
+
+- Node.js >= 20
+- MySQL
+
+## Configuración
+
+Crear archivo `.env.local`:
+
+```env
+DB_HOST=localhost
+DB_USER=root
+DB_PASSWORD=
+DB_NAME=a-donde
+AUTH_SECRET=<tu-secreto-hex-de-128-caracteres>
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Scripts
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+npm run dev       # Desarrollo
+npm run build     # Producción
+npm run start     # Servir build
+npm run lint      # ESLint
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Endpoints
 
-## Learn More
+### Auth
+| Método | Ruta | Descripción |
+|--------|------|-------------|
+| POST | `/api/auth/register` | Registrar usuario |
+| POST | `/api/auth/login` | Iniciar sesión |
+| POST | `/api/auth/logout` | Cerrar sesión |
+| GET | `/api/auth/me` | Usuario actual |
+| POST | `/api/auth/refresh` | Refrescar token |
 
-To learn more about Next.js, take a look at the following resources:
+### Lugares
+| Método | Ruta | Descripción |
+|--------|------|-------------|
+| GET | `/api/lugares` | Listar lugares |
+| GET | `/api/lugares/:id` | Obtener lugar |
+| POST | `/api/lugares` | Crear lugar |
+| PUT | `/api/lugares/:id` | Actualizar lugar |
+| DELETE | `/api/lugares/:id` | Eliminar lugar |
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### Categorías
+| Método | Ruta | Descripción |
+|--------|------|-------------|
+| GET | `/api/categorias` | Listar categorías |
+| GET | `/api/categorias/:id` | Obtener categoría |
+| POST | `/api/categorias` | Crear categoría |
+| PUT | `/api/categorias/:id` | Actualizar categoría |
+| DELETE | `/api/categorias/:id` | Eliminar categoría |
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+### Presupuestos
+| Método | Ruta | Descripción |
+|--------|------|-------------|
+| GET | `/api/presupuestos` | Listar presupuestos |
+| GET | `/api/presupuestos/:id` | Obtener presupuesto |
+| POST | `/api/presupuestos` | Crear presupuesto |
+| PUT | `/api/presupuestos/:id` | Actualizar presupuesto |
+| DELETE | `/api/presupuestos/:id` | Eliminar presupuesto |
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+### Usuarios
+| Método | Ruta | Descripción |
+|--------|------|-------------|
+| GET | `/api/usuarios` | Listar usuarios |
+| GET | `/api/usuarios/:id` | Obtener usuario |
+| PUT | `/api/usuarios/:id` | Actualizar usuario |
+| DELETE | `/api/usuarios/:id` | Eliminar usuario |
