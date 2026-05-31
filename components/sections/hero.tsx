@@ -1,12 +1,15 @@
+'use client'
+
 import Link from "next/link";
+import { ArrowRight, Lightbulb, ShoppingBag, Beef, Croissant, Apple, Milk, Sparkles } from "lucide-react";
 
 const categories = [
-  { name: "Supermercados", icon: "🛒" },
-  { name: "Carnicerías", icon: "🥩" },
-  { name: "Panaderías", icon: "🥖" },
-  { name: "Frutas y Verduras", icon: "🥦" },
-  { name: "Lácteos", icon: "🥛" },
-  { name: "Limpieza", icon: "🧹" },
+  { name: "Supermercados", icon: ShoppingBag },
+  { name: "Carnicerías", icon: Beef },
+  { name: "Panaderías", icon: Croissant },
+  { name: "Frutas y Verduras", icon: Apple },
+  { name: "Lácteos", icon: Milk },
+  { name: "Limpieza", icon: Sparkles },
 ];
 
 export function Hero() {
@@ -15,7 +18,7 @@ export function Hero() {
       <div className="absolute inset-0 bg-gradient-to-b from-emerald-50/60 to-transparent dark:from-emerald-950/20" />
       <div className="relative mx-auto flex max-w-5xl flex-col items-center px-4 pb-20 pt-16 text-center sm:pb-28 sm:pt-24">
         <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-4 py-1.5 text-sm text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-300">
-          <span className="text-base">💡</span>
+          <Lightbulb className="h-4 w-4" />
           Encuentra los mejores precios cerca de ti
         </div>
 
@@ -30,14 +33,15 @@ export function Hero() {
 
         <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row">
           <Link
-            href="/register"
-            className="inline-flex h-11 items-center justify-center rounded-lg bg-zinc-900 px-6 text-sm font-medium text-white transition-colors hover:bg-zinc-800 dark:bg-zinc-50 dark:text-zinc-900 dark:hover:bg-zinc-200"
+            href="/lugares"
+            className="inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-zinc-900 px-6 text-sm font-medium text-white transition-colors hover:bg-zinc-800 dark:bg-zinc-50 dark:text-zinc-900 dark:hover:bg-zinc-200"
           >
             Empezar ahora
+            <ArrowRight className="h-4 w-4" />
           </Link>
           <Link
             href="/login"
-            className="inline-flex h-11 items-center justify-center rounded-lg border border-zinc-300 bg-white px-6 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200 dark:hover:bg-zinc-700"
+            className="inline-flex h-11 items-center justify-center gap-2 rounded-lg border border-zinc-300 bg-white px-6 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200 dark:hover:bg-zinc-700"
           >
             Iniciar sesión
           </Link>
@@ -49,7 +53,7 @@ export function Hero() {
               key={cat.name}
               className="flex flex-col items-center gap-1.5 rounded-xl border border-zinc-200 bg-white px-2 py-3 transition-colors hover:border-emerald-200 hover:bg-emerald-50/50 dark:border-zinc-800 dark:bg-zinc-900 dark:hover:border-emerald-800 dark:hover:bg-emerald-950/30"
             >
-              <span className="text-2xl">{cat.icon}</span>
+              <cat.icon className="h-6 w-6 text-zinc-600 dark:text-zinc-400" />
               <span className="text-center text-xs font-medium text-zinc-600 dark:text-zinc-400">
                 {cat.name}
               </span>

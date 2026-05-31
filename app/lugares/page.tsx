@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Card } from "@/components/ui/card";
+import { Store, MapPin } from "lucide-react";
 import type { Lugar } from "@/types";
 
 export default function LugaresPage() {
@@ -29,26 +30,44 @@ export default function LugaresPage() {
 
   return (
     <div className="mx-auto flex max-w-4xl flex-col gap-6 p-4 pt-12">
-      <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100">
-        Lugares
-      </h1>
+      <div>
+        <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100">
+          Lugares
+        </h1>
+        <p className="mt-1 text-sm text-zinc-500">
+          Explora los lugares disponibles para tus compras
+        </p>
+      </div>
 
       {lugares.length === 0 ? (
-        <p className="text-zinc-500">No hay lugares registrados.</p>
+        <div className="flex flex-col items-center gap-3 py-16 text-center">
+          <Store className="h-12 w-12 text-zinc-300 dark:text-zinc-600" />
+          <p className="text-zinc-500">No hay lugares registrados.</p>
+        </div>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {lugares.map((lugar) => (
             <Link key={lugar.id} href={`/lugares/${lugar.id}`}>
-              <Card className="h-full cursor-pointer transition-shadow hover:shadow-md">
-                <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">
-                  {lugar.nombre}
-                </h3>
-                {lugar.descripcion && (
-                  <p className="mt-1 text-sm text-zinc-500">
-                    {lugar.descripcion}
-                  </p>
-                )}
-                <p className="mt-2 text-xs text-zinc-400">{lugar.direccion}</p>
+              <Card className="group h-full cursor-pointer transition-shadow hover:shadow-md">
+                <div className="flex items-start gap-3">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-emerald-50 dark:bg-emerald-950/50">
+                    <Store className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <h3 className="text-lg font-semibold text-zinc-900 group-hover:text-emerald-700 dark:text-zinc-100 dark:group-hover:text-emerald-400">
+                      {lugar.nombre}
+                    </h3>
+                    {lugar.descripcion && (
+                      <p className="mt-0.5 text-sm text-zinc-500 line-clamp-2">
+                        {lugar.descripcion}
+                      </p>
+                    )}
+                    <p className="mt-1.5 flex items-center gap-1 text-xs text-zinc-400">
+                      <MapPin className="h-3 w-3" />
+                      {lugar.direccion}
+                    </p>
+                  </div>
+                </div>
               </Card>
             </Link>
           ))}

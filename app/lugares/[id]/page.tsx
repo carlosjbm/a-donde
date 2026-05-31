@@ -6,6 +6,18 @@ import { useAuth } from "@/contexts/auth-context";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Modal } from "@/components/ui/modal";
+import {
+  Store,
+  MapPin,
+  ShoppingCart,
+  Wallet,
+  TrendingDown,
+  TrendingUp,
+  CheckCircle,
+  AlertCircle,
+  X,
+  Package,
+} from "lucide-react";
 import type { Producto, Lugar, Presupuesto, CompraConProducto } from "@/types";
 
 export default function LugarDetailPage() {
@@ -142,39 +154,58 @@ export default function LugarDetailPage() {
 
   return (
     <div className="mx-auto flex max-w-4xl flex-col gap-6 p-4 pt-12">
-      <div>
-        <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100">
-          {lugar.nombre}
-        </h1>
-        {lugar.descripcion && (
-          <p className="mt-1 text-sm text-zinc-500">{lugar.descripcion}</p>
-        )}
-        <p className="mt-1 text-xs text-zinc-400">{lugar.direccion}</p>
+      <div className="flex items-start gap-4">
+        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-emerald-50 dark:bg-emerald-950/50">
+          <Store className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
+        </div>
+        <div>
+          <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100">
+            {lugar.nombre}
+          </h1>
+          {lugar.descripcion && (
+            <p className="mt-0.5 text-sm text-zinc-500">
+              {lugar.descripcion}
+            </p>
+          )}
+          <p className="mt-1 flex items-center gap-1 text-xs text-zinc-400">
+            <MapPin className="h-3.5 w-3.5" />
+            {lugar.direccion}
+          </p>
+        </div>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="lg:col-span-2">
           <Card title="Productos">
             {productos.length === 0 ? (
-              <p className="text-sm text-zinc-500">
-                No hay productos registrados en este lugar.
-              </p>
+              <div className="flex flex-col items-center gap-2 py-8 text-center">
+                <Package className="h-10 w-10 text-zinc-300 dark:text-zinc-600" />
+                <p className="text-sm text-zinc-500">
+                  No hay productos registrados en este lugar.
+                </p>
+              </div>
             ) : (
               <div className="space-y-3">
                 {productos.map((producto) => (
                   <div
                     key={producto.id}
-                    className="flex items-center justify-between rounded-lg border border-zinc-200 p-3 dark:border-zinc-700"
+                    className="flex items-center justify-between rounded-lg border border-zinc-200 p-3 transition-colors hover:bg-zinc-50 dark:border-zinc-700 dark:hover:bg-zinc-800/50"
                   >
-                    <div className="flex-1">
-                      <p className="font-medium text-zinc-900 dark:text-zinc-100">
-                        {producto.nombre}
-                      </p>
-                      <p className="text-sm font-semibold text-zinc-600 dark:text-zinc-400">
-                        ${Number(producto.precio).toLocaleString("es-CL")}
-                      </p>
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-zinc-100 dark:bg-zinc-800">
+                        <Package className="h-5 w-5 text-zinc-500" />
+                      </div>
+                      <div>
+                        <p className="font-medium text-zinc-900 dark:text-zinc-100">
+                          {producto.nombre}
+                        </p>
+                        <p className="text-sm font-semibold text-zinc-600 dark:text-zinc-400">
+                          ${Number(producto.precio).toLocaleString("es-CL")}
+                        </p>
+                      </div>
                     </div>
                     <Button onClick={() => abrirModal(producto)}>
+                      <ShoppingCart className="mr-1.5 h-4 w-4" />
                       Comprar
                     </Button>
                   </div>
@@ -186,52 +217,76 @@ export default function LugarDetailPage() {
 
         <div className="space-y-4">
           <Card title="Tu presupuesto">
-            <p className="text-xs text-zinc-500">Total presupuestado</p>
-            <p className="text-2xl font-bold text-zinc-900 dark:text-zinc-100">
+            <div className="flex items-center gap-2">
+              <Wallet className="h-5 w-5 text-zinc-500" />
+              <p className="text-xs text-zinc-500">Total presupuestado</p>
+            </div>
+            <p className="mt-1 text-2xl font-bold text-zinc-900 dark:text-zinc-100">
               ${totalPresupuesto.toLocaleString("es-CL")}
             </p>
-            <div className="mt-3 space-y-1">
-              <div className="flex justify-between text-sm">
-                <span className="text-zinc-500">Gastado</span>
-                <span className="font-medium text-red-500">
-                  ${gastado.toLocaleString("es-CL")}
-                </span>
+            <div className="mt-3 space-y-2">
+              <div className="flex items-center gap-2 rounded-lg bg-red-50 px-3 py-2 dark:bg-red-950">
+                <TrendingDown className="h-4 w-4 text-red-500" />
+                <div className="flex flex-1 justify-between text-sm">
+                  <span className="text-zinc-500">Gastado</span>
+                  <span className="font-medium text-red-500">
+                    ${gastado.toLocaleString("es-CL")}
+                  </span>
+                </div>
               </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-zinc-500">Disponible</span>
-                <span
-                  className={`font-medium ${disponible >= 0 ? "text-green-600" : "text-red-500"}`}
-                >
-                  ${disponible.toLocaleString("es-CL")}
-                </span>
+              <div className="flex items-center gap-2 rounded-lg bg-green-50 px-3 py-2 dark:bg-green-950">
+                <TrendingUp className="h-4 w-4 text-green-500" />
+                <div className="flex flex-1 justify-between text-sm">
+                  <span className="text-zinc-500">Disponible</span>
+                  <span
+                    className={`font-medium ${disponible >= 0 ? "text-green-600" : "text-red-500"}`}
+                  >
+                    ${disponible.toLocaleString("es-CL")}
+                  </span>
+                </div>
               </div>
             </div>
           </Card>
-
         </div>
       </div>
 
       <Modal open={!!selectedProducto} onClose={cerrarModal}>
         {selectedProducto && !compraExitosa && (
           <div className="flex flex-col gap-4">
-            <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">
-              Confirmar compra
-            </h3>
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">
+                Confirmar compra
+              </h3>
+              <button
+                onClick={cerrarModal}
+                className="rounded-lg p-1 text-zinc-400 hover:bg-zinc-100 hover:text-zinc-600 dark:hover:bg-zinc-800"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
 
-            <div className="rounded-lg border border-zinc-200 p-4 dark:border-zinc-700">
-              <p className="text-sm text-zinc-500">Producto</p>
-              <p className="text-lg font-bold text-zinc-900 dark:text-zinc-100">
-                {selectedProducto.nombre}
-              </p>
-              <p className="mt-1 text-xl font-semibold text-zinc-600 dark:text-zinc-400">
-                ${Number(selectedProducto.precio).toLocaleString("es-CL")}
-              </p>
+            <div className="flex items-center gap-3 rounded-lg border border-zinc-200 p-4 dark:border-zinc-700">
+              <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-emerald-50 dark:bg-emerald-950/50">
+                <Package className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
+              </div>
+              <div>
+                <p className="text-sm text-zinc-500">Producto</p>
+                <p className="text-lg font-bold text-zinc-900 dark:text-zinc-100">
+                  {selectedProducto.nombre}
+                </p>
+                <p className="text-xl font-semibold text-emerald-600 dark:text-emerald-400">
+                  ${Number(selectedProducto.precio).toLocaleString("es-CL")}
+                </p>
+              </div>
             </div>
 
             <div className="space-y-2 rounded-lg bg-zinc-50 p-4 dark:bg-zinc-800">
-              <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">
-                Tu presupuesto
-              </p>
+              <div className="flex items-center gap-2">
+                <Wallet className="h-4 w-4 text-zinc-500" />
+                <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">
+                  Tu presupuesto
+                </p>
+              </div>
               <div className="flex justify-between text-sm">
                 <span className="text-zinc-500">Disponible actual</span>
                 <span className="font-medium text-zinc-900 dark:text-zinc-100">
@@ -265,7 +320,8 @@ export default function LugarDetailPage() {
             </div>
 
             {errorMsg && (
-              <div className="rounded-lg bg-red-100 p-3 text-sm text-red-800 dark:bg-red-900 dark:text-red-200">
+              <div className="flex items-center gap-2 rounded-lg bg-red-50 p-3 text-sm text-red-600 dark:bg-red-950 dark:text-red-400">
+                <AlertCircle className="h-4 w-4 shrink-0" />
                 {errorMsg}
               </div>
             )}
@@ -283,6 +339,7 @@ export default function LugarDetailPage() {
                 loading={confirmando}
                 onClick={confirmarCompra}
               >
+                <ShoppingCart className="mr-1.5 h-4 w-4" />
                 Confirmar compra
               </Button>
             </div>
@@ -292,32 +349,25 @@ export default function LugarDetailPage() {
         {selectedProducto && compraExitosa && (
           <div className="flex flex-col items-center gap-4 text-center">
             <div className="flex h-16 w-16 items-center justify-center rounded-full bg-green-100 dark:bg-green-900">
-              <svg
-                className="h-8 w-8 text-green-600 dark:text-green-300"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M5 13l4 4L19 7"
-                />
-              </svg>
+              <CheckCircle className="h-8 w-8 text-green-600 dark:text-green-300" />
             </div>
-            <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">
-              ¡Compra realizada!
-            </h3>
-            <p className="text-sm text-zinc-500">
-              {selectedProducto.nombre} — $
-              {Number(selectedProducto.precio).toLocaleString("es-CL")}
-            </p>
-            <div className="rounded-lg bg-green-50 px-4 py-2 dark:bg-green-950">
-              <p className="text-xs text-zinc-500">Nuevo disponible</p>
-              <p className="text-xl font-bold text-green-600">
-                ${disponible.toLocaleString("es-CL")}
+            <div>
+              <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">
+                ¡Compra realizada!
+              </h3>
+              <p className="mt-1 text-sm text-zinc-500">
+                {selectedProducto.nombre} — $
+                {Number(selectedProducto.precio).toLocaleString("es-CL")}
               </p>
+            </div>
+            <div className="flex items-center gap-2 rounded-lg bg-green-50 px-4 py-2 dark:bg-green-950">
+              <TrendingUp className="h-4 w-4 text-green-600" />
+              <div>
+                <p className="text-xs text-zinc-500">Nuevo disponible</p>
+                <p className="text-xl font-bold text-green-600">
+                  ${disponible.toLocaleString("es-CL")}
+                </p>
+              </div>
             </div>
             <Button variant="secondary" onClick={cerrarModal}>
               Cerrar

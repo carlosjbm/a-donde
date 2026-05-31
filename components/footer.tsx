@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { MapPin } from "lucide-react";
 
 export function Footer() {
   return (
@@ -6,8 +7,9 @@ export function Footer() {
       <div className="mx-auto flex h-14 max-w-5xl items-center justify-between px-4">
         <Link
           href="/"
-          className="text-sm font-bold text-zinc-900 dark:text-zinc-100"
+          className="flex items-center gap-1.5 text-sm font-bold text-zinc-900 dark:text-zinc-100"
         >
+          <MapPin className="h-4 w-4 text-emerald-600" />
           a-donde
         </Link>
         <p className="text-xs text-zinc-500 dark:text-zinc-500">
