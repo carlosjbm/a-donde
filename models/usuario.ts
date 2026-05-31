@@ -4,7 +4,7 @@ import { hashPassword } from "@/lib/auth";
 
 export async function findAll(): Promise<Usuario[]> {
   const [rows] = await pool.query(
-    "SELECT id, nombre, email, rol_id, created_at, updated_at FROM usuarios"
+    "SELECT id, nombre, email, created_at, updated_at FROM usuarios"
   );
   return rows as Usuario[];
 }
@@ -33,8 +33,8 @@ export async function create(
 ): Promise<Usuario> {
   const hashedPassword = await hashPassword(data.password);
   const [result] = await pool.query(
-    "INSERT INTO usuarios (nombre, email, password, rol_id) VALUES (?, ?, ?, ?)",
-    [data.nombre, data.email, hashedPassword, data.rol_id]
+    "INSERT INTO usuarios (nombre, email, password) VALUES (?, ?, ?)",
+    [data.nombre, data.email, hashedPassword]
   );
   const id = (result as { insertId: number }).insertId;
   return (await findById(id))!;

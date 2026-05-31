@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { verifyAccessToken } from "@/lib/auth";
+import { verifyAccessToken } from "@/lib/jwt";
 
 const publicRoutes = ["/login", "/register"];
 const publicApiRoutes = [
@@ -56,7 +56,7 @@ export async function middleware(request: NextRequest) {
 
   const requestHeaders = new Headers(request.headers);
   requestHeaders.set("x-user-id", payload.userId.toString());
-  requestHeaders.set("x-user-rol", payload.rolId.toString());
+  // requestHeaders.set("x-user-rol", payload.rolId.toString());
   requestHeaders.set("x-user-email", payload.email);
 
   return NextResponse.next({

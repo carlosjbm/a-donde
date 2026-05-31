@@ -29,3 +29,9 @@ export interface Categoria {
   created_at: string;
   updated_at: string;
 }
+export interface Presupuesto{
+  id:number,
+  descripcion:string,
+  created_date:Date,
+  valor:number
+}
