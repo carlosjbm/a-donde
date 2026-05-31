@@ -1,11 +1,14 @@
 import { NextRequest } from "next/server";
-import { successResponse, errorResponse } from "@/lib/utils"
-import * as presupuestoModel from "@/models/presupuesto"
+import * as presupuestoModel from "@/models/presupuesto";
+import { successResponse, errorResponse } from "@/lib/utils";
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
-    const presupuestos = await presupuestoModel.findAll()
-    return successResponse(presupuestos)
+    const userId = request.headers.get("x-user-id");
+    if (!userId) return errorResponse("No autenticado", 401);
+
+    const presupuestos = await presupuestoModel.findByUserId(Number(userId));
+    return successResponse(presupuestos);
   } catch (error) {
     console.error("Error al obtener presupuestos:", error);
     return errorResponse("Error al obtener presupuestos", 500);

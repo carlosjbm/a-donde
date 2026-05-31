@@ -8,7 +8,7 @@ export function Navbar() {
   const { user, loading, logout } = useAuth();
 
   return (
-    <nav className="border-b border-zinc-200 bg-white dark:border-zinc-700 dark:bg-zinc-900">
+    <nav className="sticky top-0 z-50 border-b border-zinc-200 bg-white/80 backdrop-blur-md dark:border-zinc-800 dark:bg-zinc-900/80">
       <div className="mx-auto flex h-14 max-w-5xl items-center justify-between px-4">
         <Link
           href="/"

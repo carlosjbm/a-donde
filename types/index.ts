@@ -33,5 +33,6 @@ export interface Presupuesto{
   id:number,
   descripcion:string,
   created_date:Date,
-  valor:number
+  valor:number,
+  user_id:number
 }

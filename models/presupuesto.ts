@@ -15,12 +15,20 @@ export async function findById(id: number): Promise<Presupuesto | null> {
   return result || null;
 }
 
+export async function findByUserId(userId: number): Promise<Presupuesto[]> {
+  const [rows] = await pool.query(
+    "SELECT * FROM presupuestos WHERE user_id = ?",
+    [userId]
+  );
+  return rows as Presupuesto[];
+}
+
 export async function create(
   data: Omit<Presupuesto, "id" | "created_date">
 ): Promise<Presupuesto> {
   const [result] = await pool.query(
-    "INSERT INTO presupuestos (descripcion, valor, created_date) VALUES (?, ?, NOW())",
-    [data.descripcion, data.valor]
+    "INSERT INTO presupuestos (descripcion, valor, user_id, created_date) VALUES (?, ?, ?, NOW())",
+    [data.descripcion, data.valor, data.user_id]
   );
   const id = (result as { insertId: number }).insertId;
   return (await findById(id))!;
