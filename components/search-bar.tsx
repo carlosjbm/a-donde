@@ -5,7 +5,11 @@ import { Search, MapPin, Award } from "lucide-react";
 import Link from "next/link";
 import type { ProductoSearchResult } from "@/types";
 
-export function SearchBar() {
+interface SearchBarProps {
+  className?: string;
+}
+
+export function SearchBar({ className = "" }: SearchBarProps) {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<ProductoSearchResult[]>([]);
   const [isOpen, setIsOpen] = useState(false);
@@ -65,7 +69,7 @@ export function SearchBar() {
   const topResults = results.slice(0, 3);
 
   return (
-    <div className="relative mx-2 flex-1 sm:mx-4">
+    <div className={`relative ${className}`}>
       <div className="relative">
         <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
         <input

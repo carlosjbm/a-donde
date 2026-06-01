@@ -55,17 +55,17 @@ export function Navbar() {
 
   return (
     <nav className="sticky top-0 z-50 border-b border-zinc-200 bg-white/80 backdrop-blur-md dark:border-zinc-800 dark:bg-zinc-900/80">
-      <div className="mx-auto flex h-14 max-w-6xl items-center justify-between gap-2 px-4">
+      <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-2 px-4 pb-3 pt-3 md:h-14 md:flex-nowrap md:pb-0 md:pt-0">
         <Link
           href="/"
-          className="shrink-0 text-lg font-bold text-zinc-900 dark:text-zinc-100"
+          className="order-1 shrink-0 rounded-lg p-2 text-zinc-600 transition-colors hover:bg-zinc-100 hover:text-zinc-900 focus:outline-none focus:ring-2 focus:ring-zinc-400 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-100 dark:focus:ring-zinc-500"
         >
-          <Home />
+          <Home className="h-5 w-5" />
         </Link>
 
-        <SearchBar />
+        <SearchBar className="order-3 w-full md:order-2 md:flex-1" />
 
-        <div className="flex shrink-0 items-center gap-3">
+        <div className="order-2 ml-auto flex shrink-0 items-center gap-3 md:order-3">
           {loading ? null : user ? (
             <>
               {disponible !== null && (
@@ -81,8 +81,11 @@ export function Navbar() {
                     <Wallet className="h-3.5 w-3.5" />$
                     {disponible.toLocaleString("es-CL")}
                   </Link>
-                  <Link href={"/lugares"}>
-                    <ShoppingCart />
+                  <Link
+                    href={"/lugares"}
+                    className="rounded-lg p-2 text-zinc-600 transition-colors hover:bg-zinc-100 hover:text-zinc-900 focus:outline-none focus:ring-2 focus:ring-zinc-400 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-100 dark:focus:ring-zinc-500"
+                  >
+                    <ShoppingCart className="h-5 w-5" />
                   </Link>
                 </>
               )}
