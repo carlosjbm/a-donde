@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useAuth } from "@/contexts/auth-context";
 import { Button } from "@/components/ui/button";
+import { SearchBar } from "@/components/search-bar";
 import { useEffect, useState } from "react";
 import {
   User,
@@ -54,15 +55,17 @@ export function Navbar() {
 
   return (
     <nav className="sticky top-0 z-50 border-b border-zinc-200 bg-white/80 backdrop-blur-md dark:border-zinc-800 dark:bg-zinc-900/80">
-      <div className="mx-auto flex h-14 max-w-5xl items-center justify-between px-4">
+      <div className="mx-auto flex h-14 max-w-6xl items-center justify-between gap-2 px-4">
         <Link
           href="/"
-          className="text-lg font-bold text-zinc-900 dark:text-zinc-100"
+          className="shrink-0 text-lg font-bold text-zinc-900 dark:text-zinc-100"
         >
           <Home />
         </Link>
 
-        <div className="flex items-center gap-3">
+        <SearchBar />
+
+        <div className="flex shrink-0 items-center gap-3">
           {loading ? null : user ? (
             <>
               {disponible !== null && (

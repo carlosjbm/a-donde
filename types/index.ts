@@ -58,3 +58,11 @@ export interface CompraConProducto extends Compra {
   producto_nombre: string;
   producto_precio: number;
 }
+
+export interface ProductoSearchResult {
+  id: number;
+  nombre: string;
+  precio: number;
+  lugar_id: number;
+  lugar_nombre: string;
+}

@@ -52,4 +52,6 @@ declare module "lucide-react" {
   export const CircleDollarSign: Icon;
   export const FileText: Icon;
   export const ChevronDown: Icon;
+  export const Search: Icon;
+  export const Award: Icon;
 }

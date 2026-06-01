@@ -6,6 +6,7 @@ const publicApiRoutes = [
   "/api/auth/login",
   "/api/auth/register",
   "/api/auth/refresh",
+  "/api/productos/buscar",
 ];
 
 export async function middleware(request: NextRequest) {
