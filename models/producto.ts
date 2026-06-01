@@ -6,7 +6,7 @@ export async function findById(
   activo: boolean,
 ): Promise<Producto | null> {
   const [rows] = await pool.query(
-    "SELECT * FROM productos WHERE id = ? and activo=?",
+    "SELECT * FROM productos WHERE id = ? and activo= ? ",
     [id, activo],
   );
   return (rows as Producto[])[0] || null;
