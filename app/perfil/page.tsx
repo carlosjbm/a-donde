@@ -47,7 +47,7 @@ export default function PerfilPage() {
 
   useEffect(() => {
     if (!user) return;
-    setLoadingData(true);
+    // setLoadingData(true);
     Promise.all([
       fetch("/api/presupuestos/mine").then((r) => r.json()),
       fetch("/api/compras/mine").then((r) => r.json()),

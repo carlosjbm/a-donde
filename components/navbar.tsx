@@ -4,7 +4,16 @@ import Link from "next/link";
 import { useAuth } from "@/contexts/auth-context";
 import { Button } from "@/components/ui/button";
 import { useEffect, useState } from "react";
-import { User, Shield, LogOut, LogIn, UserPlus, Wallet } from "lucide-react";
+import {
+  User,
+  Shield,
+  LogOut,
+  LogIn,
+  UserPlus,
+  Wallet,
+  ShoppingCart,
+  Home,
+} from "lucide-react";
 
 export function Navbar() {
   const { user, loading, logout } = useAuth();
@@ -13,8 +22,8 @@ export function Navbar() {
 
   useEffect(() => {
     if (!user) {
-      setPresupuestoTotal(null);
-      setGastado(0);
+      // setPresupuestoTotal(null);
+      // setGastado(0);
       return;
     }
 
@@ -25,7 +34,7 @@ export function Navbar() {
       if (presJson.success) {
         const total = presJson.data.reduce(
           (s: number, p: { valor: number }) => s + Number(p.valor),
-          0
+          0,
         );
         setPresupuestoTotal(total);
       }
@@ -33,7 +42,7 @@ export function Navbar() {
         const totalGastado = compJson.data.reduce(
           (s: number, c: { producto_precio: number }) =>
             s + Number(c.producto_precio),
-          0
+          0,
         );
         setGastado(totalGastado);
       }
@@ -50,24 +59,29 @@ export function Navbar() {
           href="/"
           className="text-lg font-bold text-zinc-900 dark:text-zinc-100"
         >
-          a-donde
+          <Home />
         </Link>
 
         <div className="flex items-center gap-3">
           {loading ? null : user ? (
             <>
               {disponible !== null && (
-                <Link
-                  href="/perfil"
-                  className={`flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
-                    disponible >= 0
-                      ? "border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 dark:border-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-300"
-                      : "border-red-200 bg-red-50 text-red-700 hover:bg-red-100 dark:border-red-800 dark:bg-red-950/50 dark:text-red-300"
-                  }`}
-                >
-                  <Wallet className="h-3.5 w-3.5" />
-                  ${disponible.toLocaleString("es-CL")}
-                </Link>
+                <>
+                  <Link
+                    href="/perfil"
+                    className={`flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
+                      disponible >= 0
+                        ? "border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 dark:border-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-300"
+                        : "border-red-200 bg-red-50 text-red-700 hover:bg-red-100 dark:border-red-800 dark:bg-red-950/50 dark:text-red-300"
+                    }`}
+                  >
+                    <Wallet className="h-3.5 w-3.5" />$
+                    {disponible.toLocaleString("es-CL")}
+                  </Link>
+                  <Link href={"/lugares"}>
+                    <ShoppingCart />
+                  </Link>
+                </>
               )}
               <Link
                 href="/perfil"

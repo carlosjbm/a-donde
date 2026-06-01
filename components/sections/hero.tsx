@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { ArrowRight, Lightbulb, ShoppingBag, Beef, Croissant, Apple, Milk, Sparkles } from "lucide-react";
+import { useAuth } from "@/contexts/auth-context";
 
 const categories = [
   { name: "Supermercados", icon: ShoppingBag },
@@ -12,7 +13,9 @@ const categories = [
   { name: "Limpieza", icon: Sparkles },
 ];
 
+
 export function Hero() {
+  const {user}=useAuth()
   return (
     <section className="relative overflow-hidden border-b border-zinc-200 dark:border-zinc-800">
       <div className="absolute inset-0 bg-gradient-to-b from-emerald-50/60 to-transparent dark:from-emerald-950/20" />
@@ -39,12 +42,13 @@ export function Hero() {
             Empezar ahora
             <ArrowRight className="h-4 w-4" />
           </Link>
-          <Link
+          {!user && <Link
             href="/login"
             className="inline-flex h-11 items-center justify-center gap-2 rounded-lg border border-zinc-300 bg-white px-6 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200 dark:hover:bg-zinc-700"
           >
             Iniciar sesión
-          </Link>
+          </Link>}
+          
         </div>
 
         <div className="mt-12 grid w-full max-w-2xl grid-cols-3 gap-3 sm:grid-cols-6">

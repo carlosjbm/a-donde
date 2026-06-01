@@ -43,6 +43,7 @@ export interface Producto {
   escencial: boolean;
   imagen: string | null;
   id_categ: number;
+  activo: boolean
 }
 
 export interface Compra {
