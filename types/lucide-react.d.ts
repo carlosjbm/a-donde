@@ -60,4 +60,9 @@ declare module "lucide-react" {
   export const Sprout: Icon;
   export const Crown: Icon;
   export const Check: Icon;
+  export const Calendar: Icon;
+  export const Clock: Icon;
+  export const ChevronRight: Icon;
+  export const Heart: Icon;
+  export const Bookmark: Icon;
 }
