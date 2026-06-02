@@ -59,4 +59,5 @@ declare module "lucide-react" {
   export const CheckCircle2: Icon;
   export const Sprout: Icon;
   export const Crown: Icon;
+  export const Check: Icon;
 }

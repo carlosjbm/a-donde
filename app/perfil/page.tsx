@@ -4,8 +4,9 @@ import { useAuth } from "@/contexts/auth-context";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
 import { useRouter } from "next/navigation";
-import { useEffect, useState, FormEvent } from "react";
+import { useEffect, useState, FormEvent, useCallback } from "react";
 import type { Presupuesto, CompraConProducto } from "@/types";
 import {
   User,
@@ -22,8 +23,22 @@ import {
   FileText,
   ChevronDown,
   AlertCircle,
+  Check,
+  Sparkles,
 } from "lucide-react";
-import Link from "next/link";
+
+function formatDateTime(value: string | Date | null | undefined): string {
+  if (!value) return "";
+  const d = typeof value === "string" ? new Date(value) : value;
+  if (Number.isNaN(d.getTime())) return "";
+  return d.toLocaleDateString("es-CL", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
 
 export default function PerfilPage() {
   const { user, loading, logout } = useAuth();
@@ -32,6 +47,7 @@ export default function PerfilPage() {
   const [presupuestos, setPresupuestos] = useState<Presupuesto[]>([]);
   const [compras, setCompras] = useState<CompraConProducto[]>([]);
   const [loadingData, setLoadingData] = useState(true);
+  const [pendingAgotado, setPendingAgotado] = useState<Set<number>>(new Set());
 
   const [descripcion, setDescripcion] = useState("");
   const [valor, setValor] = useState("");
@@ -69,6 +85,47 @@ export default function PerfilPage() {
     0
   );
   const disponible = totalPresupuesto - totalGastado;
+  const enDespensa = compras.filter((c) => !c.agotado).length;
+  const agotados = compras.filter((c) => c.agotado).length;
+
+  const toggleAgotado = useCallback(
+    async (compra: CompraConProducto, next: boolean) => {
+      if (pendingAgotado.has(compra.id)) return;
+
+      setPendingAgotado((prev) => new Set(prev).add(compra.id));
+      const previous = compras;
+      setCompras((curr) =>
+        curr.map((c) =>
+          c.id === compra.id
+            ? { ...c, agotado: next, fecha_agotado: next ? new Date().toISOString() : null }
+            : c
+        )
+      );
+
+      try {
+        const res = await fetch(`/api/compras/${compra.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ agotado: next }),
+        });
+        const json = await res.json();
+        if (!json.success) throw new Error(json.error);
+        setCompras((curr) =>
+          curr.map((c) => (c.id === compra.id ? { ...c, ...json.data } : c))
+        );
+      } catch (err) {
+        setCompras(previous);
+        console.error("Error al actualizar estado:", err);
+      } finally {
+        setPendingAgotado((prev) => {
+          const next = new Set(prev);
+          next.delete(compra.id);
+          return next;
+        });
+      }
+    },
+    [compras, pendingAgotado]
+  );
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -302,6 +359,24 @@ export default function PerfilPage() {
                 Ir a comprar ahora
               </Button>
 
+              {compras.length > 0 && (
+                <div className="mb-3 flex items-center justify-between rounded-lg bg-zinc-50 px-3 py-2 text-xs text-zinc-600 dark:bg-zinc-800/50 dark:text-zinc-400">
+                  <span className="flex items-center gap-1.5">
+                    <Sparkles className="h-3.5 w-3.5 text-emerald-500" />
+                    <span className="font-medium text-zinc-700 dark:text-zinc-200">
+                      {enDespensa}
+                    </span>{" "}
+                    en tu despensa
+                  </span>
+                  <span>
+                    <span className="font-medium text-zinc-700 dark:text-zinc-200">
+                      {agotados}
+                    </span>{" "}
+                    agotados
+                  </span>
+                </div>
+              )}
+
               {compras.length === 0 ? (
                 <div className="flex flex-col items-center gap-2 py-8 text-center">
                   <Package className="h-10 w-10 text-zinc-300 dark:text-zinc-600" />
@@ -310,35 +385,94 @@ export default function PerfilPage() {
                   </p>
                 </div>
               ) : (
-                <div className="space-y-2">
-                  {compras.map((c) => (
-                    <div
-                      key={c.id}
-                      className="flex items-center justify-between gap-2 rounded-lg border border-zinc-200 px-3 py-2 dark:border-zinc-700"
-                    >
-                      <div className="flex min-w-0 items-center gap-2">
-                        <ShoppingCart className="h-4 w-4 shrink-0 text-zinc-400" />
-                        <div className="min-w-0">
-                          <p className="truncate text-sm font-medium text-zinc-900 dark:text-zinc-100">
-                            {c.producto_nombre}
-                          </p>
-                          <p className="whitespace-nowrap text-xs text-zinc-400">
-                            {new Date(c.create_at).toLocaleDateString("es-CL", {
-                              day: "numeric",
-                              month: "short",
-                              year: "numeric",
-                              hour: "2-digit",
-                              minute: "2-digit",
-                            })}
+                <ul className="space-y-2">
+                  {compras.map((c) => {
+                    const agotado = c.agotado;
+                    const isPending = pendingAgotado.has(c.id);
+                    return (
+                      <li
+                        key={c.id}
+                        className={`group flex items-center gap-3 rounded-lg border px-3 py-2.5 transition-colors ${
+                          agotado
+                            ? "border-zinc-200 bg-zinc-50/70 dark:border-zinc-800 dark:bg-zinc-900/40"
+                            : "border-zinc-200 bg-white dark:border-zinc-700 dark:bg-zinc-900/40"
+                        }`}
+                      >
+                        <div
+                          className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg transition-colors ${
+                            agotado
+                              ? "bg-zinc-100 text-zinc-400 dark:bg-zinc-800 dark:text-zinc-500"
+                              : "bg-emerald-50 text-emerald-600 dark:bg-emerald-950/50 dark:text-emerald-400"
+                          }`}
+                        >
+                          {agotado ? (
+                            <Check className="h-4 w-4" />
+                          ) : (
+                            <ShoppingCart className="h-4 w-4" />
+                          )}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-1.5">
+                            <p
+                              className={`truncate text-sm font-medium ${
+                                agotado
+                                  ? "text-zinc-500 line-through decoration-zinc-400 dark:text-zinc-500"
+                                  : "text-zinc-900 dark:text-zinc-100"
+                              }`}
+                            >
+                              {c.producto_nombre}
+                            </p>
+                            {agotado && (
+                              <span className="shrink-0 rounded-md bg-zinc-200 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400">
+                                Agotado
+                              </span>
+                            )}
+                          </div>
+                          <p className="mt-0.5 flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-[11px] text-zinc-500 dark:text-zinc-400">
+                            <span>
+                              Comprado: {formatDateTime(c.create_at)}
+                            </span>
+                            {agotado && c.fecha_agotado && (
+                              <>
+                                <span className="text-zinc-300 dark:text-zinc-600">
+                                  •
+                                </span>
+                                <span className="font-medium text-zinc-600 dark:text-zinc-300">
+                                  Agotado: {formatDateTime(c.fecha_agotado)}
+                                </span>
+                              </>
+                            )}
                           </p>
                         </div>
-                      </div>
-                      <span className="shrink-0 text-sm font-semibold text-red-500">
-                        -${Number(c.producto_precio).toLocaleString("es-CL")}
-                      </span>
-                    </div>
-                  ))}
-                </div>
+                        <div className="flex shrink-0 flex-col items-end gap-0.5">
+                          <Switch
+                            id={`switch-${c.id}`}
+                            checked={agotado}
+                            disabled={isPending}
+                            onChange={(next) => toggleAgotado(c, next)}
+                            label={`Marcar ${c.producto_nombre} como agotado`}
+                          />
+                          <span className="text-[10px] text-zinc-400">
+                            {isPending
+                              ? "Guardando…"
+                              : agotado
+                                ? "En despensa"
+                                : "En despensa"}
+                          </span>
+                        </div>
+                        <span
+                          className={`shrink-0 text-sm font-semibold ${
+                            agotado
+                              ? "text-zinc-400 line-through dark:text-zinc-500"
+                              : "text-red-500"
+                          }`}
+                        >
+                          -${Number(c.producto_precio).toLocaleString("es-CL")}
+                        </span>
+                      </li>
+                    );
+                  })}
+                </ul>
               )}
             </>
           )}

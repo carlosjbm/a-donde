@@ -7,6 +7,7 @@ export async function findByUserId(
 ): Promise<CompraConProducto[]> {
   const [rows] = await pool.query(
     `SELECT c.id, c.create_at, c.observacion, c.id_producto, c.user_id,
+            c.agotado, c.fecha_agotado,
             p.nombre AS producto_nombre, p.precio AS producto_precio
      FROM compras c
      JOIN productos p ON c.id_producto = p.id
@@ -15,6 +16,30 @@ export async function findByUserId(
     [userId]
   );
   return rows as CompraConProducto[];
+}
+
+export async function findById(
+  id: number,
+  userId: number
+): Promise<Compra | null> {
+  const [rows] = await pool.query(
+    "SELECT id, create_at, observacion, id_producto, user_id, agotado, fecha_agotado FROM compras WHERE id = ? AND user_id = ?",
+    [id, userId]
+  );
+  return (rows as Compra[])[0] || null;
+}
+
+export async function setAgotado(
+  id: number,
+  userId: number,
+  agotado: boolean
+): Promise<Compra | null> {
+  const fechaAgotado = agotado ? new Date() : null;
+  await pool.query(
+    "UPDATE compras SET agotado = ?, fecha_agotado = ? WHERE id = ? AND user_id = ?",
+    [agotado, fechaAgotado, id, userId]
+  );
+  return findById(id, userId);
 }
 
 export async function create(data: {
@@ -59,13 +84,13 @@ export async function create(data: {
   ]);
 
   const [result] = await pool.query(
-    "INSERT INTO compras (id_producto, user_id, observacion, create_at) VALUES (?, ?, ?, NOW())",
+    "INSERT INTO compras (id_producto, user_id, observacion, agotado, fecha_agotado, create_at) VALUES (?, ?, ?, 0, NULL, NOW())",
     [id_producto, user_id, observacion]
   );
   const compraId = (result as { insertId: number }).insertId;
 
   const [compraRows] = await pool.query(
-    "SELECT * FROM compras WHERE id = ?",
+    "SELECT id, create_at, observacion, id_producto, user_id, agotado, fecha_agotado FROM compras WHERE id = ?",
     [compraId]
   );
   const compra = (compraRows as Compra[])[0];

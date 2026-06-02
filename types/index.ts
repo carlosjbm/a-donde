@@ -52,6 +52,8 @@ export interface Compra {
   observacion: string;
   id_producto: number;
   user_id: number;
+  agotado: boolean;
+  fecha_agotado: string | null;
 }
 
 export interface CompraConProducto extends Compra {
