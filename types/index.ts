@@ -66,3 +66,20 @@ export interface ProductoSearchResult {
   lugar_id: number;
   lugar_nombre: string;
 }
+
+export interface SugerenciaProducto {
+  id: number;
+  nombre: string;
+  precio: number;
+  imagen: string | null;
+  escencial: boolean;
+  lugar_id: number;
+  lugar_nombre: string;
+}
+
+export interface SugerenciaPack {
+  id: number;
+  nombre: string;
+  total: number;
+  productos: SugerenciaProducto[];
+}

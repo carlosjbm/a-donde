@@ -1,5 +1,6 @@
 'use client'
 import { Hero } from "@/components/sections/hero";
+import { SuggestionsSection } from "@/components/sections/suggestions-section";
 import { HowItWorks } from "@/components/sections/how-it-works";
 import { CategoryGrid } from "@/components/sections/category-grid";
 import { CTASection } from "@/components/sections/cta-section";
@@ -10,10 +11,11 @@ export default function Home() {
   return (
     <>
       <Hero />
+      {user && <SuggestionsSection />}
       <HowItWorks />
       <CategoryGrid />
       {!user&&<CTASection />}
-      
+
     </>
   );
 }

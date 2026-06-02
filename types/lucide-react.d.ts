@@ -54,4 +54,9 @@ declare module "lucide-react" {
   export const ChevronDown: Icon;
   export const Search: Icon;
   export const Award: Icon;
+  export const ShoppingBasket: Icon;
+  export const ArrowUpRight: Icon;
+  export const CheckCircle2: Icon;
+  export const Sprout: Icon;
+  export const Crown: Icon;
 }
