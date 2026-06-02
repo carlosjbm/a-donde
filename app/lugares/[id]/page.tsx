@@ -153,7 +153,7 @@ export default function LugarDetailPage() {
   const disponible = totalPresupuesto - gastado;
 
   return (
-    <div className="mx-auto flex max-w-4xl flex-col gap-6 p-4 pt-12">
+    <div className="mx-auto flex w-full max-w-7xl flex-col gap-6 p-4 pt-12 sm:p-6">
       <div className="flex items-start gap-4">
         <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-emerald-50 dark:bg-emerald-950/50">
           <Store className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
@@ -185,26 +185,28 @@ export default function LugarDetailPage() {
                 </p>
               </div>
             ) : (
-              <div className="space-y-3">
+              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
                 {productos.map((producto) => (
                   <div
                     key={producto.id}
-                    className="flex items-center justify-between rounded-lg border border-zinc-200 p-3 transition-colors hover:bg-zinc-50 dark:border-zinc-700 dark:hover:bg-zinc-800/50"
+                    className="flex items-center gap-3 rounded-lg border border-zinc-200 p-4 transition-colors hover:bg-zinc-50 dark:border-zinc-700 dark:hover:bg-zinc-800/50"
                   >
-                    <div className="flex items-center gap-3">
-                      <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-zinc-100 dark:bg-zinc-800">
-                        <Package className="h-5 w-5 text-zinc-500" />
-                      </div>
-                      <div>
-                        <p className="font-medium text-zinc-900 dark:text-zinc-100">
-                          {producto.nombre}
-                        </p>
-                        <p className="text-sm font-semibold text-zinc-600 dark:text-zinc-400">
-                          ${Number(producto.precio).toLocaleString("es-CL")}
-                        </p>
-                      </div>
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-zinc-100 dark:bg-zinc-800">
+                      <Package className="h-5 w-5 text-zinc-500" />
                     </div>
-                    <Button onClick={() => abrirModal(producto)}>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate font-medium text-zinc-900 dark:text-zinc-100">
+                        {producto.nombre}
+                      </p>
+                      <p className="text-sm font-semibold text-zinc-600 dark:text-zinc-400">
+                        ${Number(producto.precio).toLocaleString("es-CL")}
+                      </p>
+                    </div>
+                    <Button
+                      onClick={() => abrirModal(producto)}
+                      size="sm"
+                      className="shrink-0"
+                    >
                       <ShoppingCart className="mr-1.5 h-4 w-4" />
                       Comprar
                     </Button>
