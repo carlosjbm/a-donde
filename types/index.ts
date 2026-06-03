@@ -17,6 +17,7 @@ export interface Lugar {
   longitud: number | null;
   created_at: string;
   updated_at: string;
+  transferencia: boolean;
 }
 
 export interface Categoria {
@@ -27,12 +28,12 @@ export interface Categoria {
   created_at: string;
   updated_at: string;
 }
-export interface Presupuesto{
-  id:number,
-  descripcion:string,
-  created_date:Date,
-  valor:number,
-  user_id:number
+export interface Presupuesto {
+  id: number;
+  descripcion: string;
+  created_date: Date;
+  valor: number;
+  user_id: number;
 }
 
 export interface Producto {
@@ -43,7 +44,7 @@ export interface Producto {
   escencial: boolean;
   imagen: string | null;
   id_categ: number;
-  activo: boolean
+  activo: boolean;
 }
 
 export interface Compra {

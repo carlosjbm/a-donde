@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Card } from "@/components/ui/card";
-import { Store, MapPin } from "lucide-react";
+import { Store, MapPin, CreditCard } from "lucide-react";
 import type { Lugar } from "@/types";
 
 export default function LugaresPage() {
@@ -54,9 +54,20 @@ export default function LugaresPage() {
                     <Store className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
                   </div>
                   <div className="min-w-0 flex-1">
-                    <h3 className="text-lg font-semibold text-zinc-900 group-hover:text-emerald-700 dark:text-zinc-100 dark:group-hover:text-emerald-400">
-                      {lugar.nombre}
-                    </h3>
+                    <div className="flex items-start justify-between gap-2">
+                      <h3 className="text-lg font-semibold text-zinc-900 group-hover:text-emerald-700 dark:text-zinc-100 dark:group-hover:text-emerald-400">
+                        {lugar.nombre}
+                      </h3>
+                      {lugar.transferencia ? (
+                        <span
+                          title="Acepta pago electrónico"
+                          aria-label="Acepta pago electrónico"
+                          className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-sky-50 text-sky-600 dark:bg-sky-950/50 dark:text-sky-400"
+                        >
+                          <CreditCard className="h-3.5 w-3.5" />
+                        </span>
+                      ) : null}
+                    </div>
                     {lugar.descripcion && (
                       <p className="mt-0.5 text-sm text-zinc-500 line-clamp-2">
                         {lugar.descripcion}

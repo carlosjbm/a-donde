@@ -19,7 +19,7 @@ export async function findById(
 
 export async function findByLugarId(lugarId: number): Promise<Producto[]> {
   const [rows] = await pool.query(
-    "SELECT * FROM productos WHERE id_lugar = ?",
+    "SELECT * FROM productos WHERE id_lugar = ? AND activo = true",
     [lugarId],
   );
   return rows as Producto[];

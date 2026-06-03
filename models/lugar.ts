@@ -3,14 +3,14 @@ import { Lugar } from "@/types";
 
 export async function findAll(): Promise<Lugar[]> {
   const [rows] = await pool.query(
-    "SELECT id, nombre, descripcion, direccion, latitud, longitud, created_at, updated_at FROM lugares"
+    "SELECT id, nombre, descripcion, direccion, latitud, longitud, transferencia, created_at, updated_at FROM lugares"
   );
   return rows as Lugar[];
 }
 
 export async function findById(id: number): Promise<Lugar | null> {
   const [rows] = await pool.query(
-    "SELECT id, nombre, descripcion, direccion, latitud, longitud, created_at, updated_at FROM lugares WHERE id = ?",
+    "SELECT id, nombre, descripcion, direccion, latitud, longitud, transferencia, created_at, updated_at FROM lugares WHERE id = ?",
     [id]
   );
   const result = (rows as Lugar[])[0];
@@ -21,13 +21,14 @@ export async function create(
   data: Omit<Lugar, "id" | "created_at" | "updated_at">
 ): Promise<Lugar> {
   const [result] = await pool.query(
-    "INSERT INTO lugares (nombre, descripcion, direccion, latitud, longitud) VALUES (?, ?, ?, ?, ?)",
+    "INSERT INTO lugares (nombre, descripcion, direccion, latitud, longitud, transferencia) VALUES (?, ?, ?, ?, ?, ?)",
     [
       data.nombre,
       data.descripcion,
       data.direccion,
       data.latitud,
       data.longitud,
+      data.transferencia ? 1 : 0,
     ]
   );
   const id = (result as { insertId: number }).insertId;
@@ -60,6 +61,10 @@ export async function update(
   if (data.longitud !== undefined) {
     fields.push("longitud = ?");
     values.push(data.longitud);
+  }
+  if (data.transferencia !== undefined) {
+    fields.push("transferencia = ?");
+    values.push(data.transferencia ? 1 : 0);
   }
 
   if (fields.length === 0) return findById(id);

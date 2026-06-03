@@ -15,7 +15,7 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { nombre, descripcion, direccion, latitud, longitud } = body;
+    const { nombre, descripcion, direccion, latitud, longitud, transferencia } = body;
 
     if (!nombre || !direccion) {
       return errorResponse("Nombre y dirección son obligatorios");
@@ -27,6 +27,7 @@ export async function POST(request: NextRequest) {
       direccion,
       latitud: latitud || null,
       longitud: longitud || null,
+      transferencia: Boolean(transferencia),
     });
     return successResponse(lugar, 201);
   } catch (error) {

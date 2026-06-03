@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useEffect, useRef, useState } from "react";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/contexts/auth-context";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -17,6 +17,7 @@ import {
   AlertCircle,
   X,
   Package,
+  CreditCard,
 } from "lucide-react";
 import type { Producto, Lugar, Presupuesto, CompraConProducto } from "@/types";
 
@@ -24,6 +25,7 @@ export default function LugarDetailPage() {
   const { user } = useAuth();
   const router = useRouter();
   const params = useParams();
+  const searchParams = useSearchParams();
 
   const [lugar, setLugar] = useState<Lugar | null>(null);
   const [productos, setProductos] = useState<Producto[]>([]);
@@ -37,6 +39,10 @@ export default function LugarDetailPage() {
   const [confirmando, setConfirmando] = useState(false);
   const [compraExitosa, setCompraExitosa] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
+
+  const highlightedProductId = Number(searchParams.get("producto")) || null;
+  const productRefs = useRef<Record<number, HTMLDivElement | null>>({});
+  const handledProductRef = useRef<number | null>(null);
 
   useEffect(() => {
     async function load() {
@@ -70,6 +76,38 @@ export default function LugarDetailPage() {
       if (compJson.success) setCompras(compJson.data);
     });
   }, [user]);
+
+  useEffect(() => {
+    if (loading || productos.length === 0) return;
+
+    const productoId = Number(searchParams.get("producto"));
+    if (!productoId) return;
+
+    const match = productos.find((p) => p.id === productoId);
+    if (!match) return;
+
+    const el = productRefs.current[productoId];
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+
+    if (
+      searchParams.get("autobuy") === "1" &&
+      handledProductRef.current !== productoId
+    ) {
+      handledProductRef.current = productoId;
+      if (user) {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        setSelectedProducto((current) =>
+          current?.id === match.id ? current : match,
+        );
+      } else {
+        router.push(
+          `/login?redirect=/lugares/${params.id}?producto=${productoId}&autobuy=1`,
+        );
+      }
+    }
+  }, [loading, productos, searchParams, user, router, params.id]);
 
   const totalPresupuesto = presupuestos.reduce(
     (s, p) => s + Number(p.valor),
@@ -159,9 +197,21 @@ export default function LugarDetailPage() {
           <Store className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
         </div>
         <div>
-          <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100">
-            {lugar.nombre}
-          </h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100">
+              {lugar.nombre}
+            </h1>
+            {lugar.transferencia ? (
+              <span
+                title="Acepta pago electrónico"
+                aria-label="Acepta pago electrónico"
+                className="inline-flex items-center gap-1 rounded-full bg-sky-50 px-2 py-0.5 text-xs font-medium text-sky-700 dark:bg-sky-950/50 dark:text-sky-300"
+              >
+                <CreditCard className="h-3.5 w-3.5" />
+                Pago electrónico
+              </span>
+            ) : null}
+          </div>
           {lugar.descripcion && (
             <p className="mt-0.5 text-sm text-zinc-500">
               {lugar.descripcion}
@@ -186,32 +236,54 @@ export default function LugarDetailPage() {
               </div>
             ) : (
               <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-                {productos.map((producto) => (
-                  <div
-                    key={producto.id}
-                    className="flex items-center gap-3 rounded-lg border border-zinc-200 p-4 transition-colors hover:bg-zinc-50 dark:border-zinc-700 dark:hover:bg-zinc-800/50"
-                  >
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-zinc-100 dark:bg-zinc-800">
-                      <Package className="h-5 w-5 text-zinc-500" />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate font-medium text-zinc-900 dark:text-zinc-100">
-                        {producto.nombre}
-                      </p>
-                      <p className="text-sm font-semibold text-zinc-600 dark:text-zinc-400">
-                        ${Number(producto.precio).toLocaleString("es-CL")}
-                      </p>
-                    </div>
-                    <Button
-                      onClick={() => abrirModal(producto)}
-                      size="sm"
-                      className="shrink-0"
+                {productos.map((producto) => {
+                  const isHighlighted = highlightedProductId === producto.id;
+                  return (
+                    <div
+                      key={producto.id}
+                      ref={(el) => {
+                        productRefs.current[producto.id] = el;
+                      }}
+                      className={`flex items-center gap-3 rounded-lg border p-4 transition-all hover:bg-zinc-50 dark:hover:bg-zinc-800/50 ${
+                        isHighlighted
+                          ? "border-amber-400 bg-amber-50 ring-2 ring-amber-300 ring-offset-2 dark:border-amber-500 dark:bg-amber-950/30 dark:ring-amber-500/50"
+                          : "border-zinc-200 dark:border-zinc-700"
+                      }`}
                     >
-                      <ShoppingCart className="mr-1.5 h-4 w-4" />
-                      Comprar
-                    </Button>
-                  </div>
-                ))}
+                      <div
+                        className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${
+                          isHighlighted
+                            ? "bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-300"
+                            : "bg-zinc-100 text-zinc-500 dark:bg-zinc-800"
+                        }`}
+                      >
+                        <Package className="h-5 w-5" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate font-medium text-zinc-900 dark:text-zinc-100">
+                          {producto.nombre}
+                        </p>
+                        <p
+                          className={`text-sm font-semibold ${
+                            isHighlighted
+                              ? "text-amber-700 dark:text-amber-300"
+                              : "text-zinc-600 dark:text-zinc-400"
+                          }`}
+                        >
+                          ${Number(producto.precio).toLocaleString("es-CL")}
+                        </p>
+                      </div>
+                      <Button
+                        onClick={() => abrirModal(producto)}
+                        size="sm"
+                        className="shrink-0"
+                      >
+                        <ShoppingCart className="mr-1.5 h-4 w-4" />
+                        Comprar
+                      </Button>
+                    </div>
+                  );
+                })}
               </div>
             )}
           </Card>

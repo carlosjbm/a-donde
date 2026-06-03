@@ -65,4 +65,5 @@ declare module "lucide-react" {
   export const ChevronRight: Icon;
   export const Heart: Icon;
   export const Bookmark: Icon;
+  export const CreditCard: Icon;
 }
