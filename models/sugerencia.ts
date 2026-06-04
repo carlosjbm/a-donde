@@ -1,5 +1,6 @@
 import pool from "@/lib/db";
 import { SugerenciaPack, SugerenciaProducto } from "@/types";
+import * as presupuestoModel from "./presupuesto";
 
 export async function findSuggestionsByUser(
   userId: number
@@ -49,6 +50,7 @@ export async function findSuggestionsByUser(
         id: r.pack_id,
         nombre: r.pack_nombre,
         total: 0,
+        precio_total: 0,
         productos: [],
       };
       packsMap.set(r.pack_id, pack);
@@ -67,7 +69,25 @@ export async function findSuggestionsByUser(
 
   for (const pack of packsMap.values()) {
     pack.total = pack.productos.length;
+    pack.precio_total = pack.productos.reduce(
+      (sum, p) => sum + Number(p.precio),
+      0
+    );
   }
 
-  return Array.from(packsMap.values());
+  const presupuestos = await presupuestoModel.findByUserId(userId);
+  const hasBudget = presupuestos.length > 0;
+  const disponible = hasBudget
+    ? presupuestos.reduce((sum, p) => sum + Number(p.valor), 0)
+    : Infinity;
+
+  let result = Array.from(packsMap.values());
+  if (hasBudget) {
+    result = result.filter((pack) => pack.precio_total <= disponible);
+  }
+  result.sort(
+    (a, b) => a.precio_total - b.precio_total || a.id - b.id
+  );
+
+  return result;
 }

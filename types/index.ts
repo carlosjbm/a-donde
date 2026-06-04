@@ -84,5 +84,6 @@ export interface SugerenciaPack {
   id: number;
   nombre: string;
   total: number;
+  precio_total: number;
   productos: SugerenciaProducto[];
 }

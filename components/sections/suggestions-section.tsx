@@ -170,12 +170,20 @@ function PackCard({ pack, index }: { pack: SugerenciaPack; index: number }) {
             </h3>
           </div>
         </div>
-        <span
-          className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-medium ring-1 ring-inset ${theme.badge}`}
-        >
-          <Sparkles className="h-3 w-3" />
-          {pack.total} {pack.total === 1 ? "sugerencia" : "sugerencias"}
-        </span>
+        <div className="flex flex-col items-end gap-0.5">
+          <span className="text-[9px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-500">
+            Total del pack
+          </span>
+          <span
+            className={`text-lg font-bold leading-none ${theme.priceText} ${theme.priceTextDark}`}
+          >
+            {formatPrice(pack.precio_total)}
+          </span>
+          <span className="inline-flex items-center gap-1 text-[10px] font-medium text-zinc-500 dark:text-zinc-400">
+            <Sparkles className="h-2.5 w-2.5" />
+            {pack.total} {pack.total === 1 ? "sugerencia" : "sugerencias"}
+          </span>
+        </div>
       </header>
 
       {featured && (
