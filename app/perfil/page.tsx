@@ -403,12 +403,20 @@ function NewBudgetModal({
   onSubmit,
   creating,
   error,
+  descripcion,
+  valor,
+  onDescripcionChange,
+  onValorChange,
 }: {
   open: boolean;
   onClose: () => void;
   onSubmit: (e: FormEvent) => void;
   creating: boolean;
   error: string;
+  descripcion: string;
+  valor: string;
+  onDescripcionChange: (v: string) => void;
+  onValorChange: (v: string) => void;
 }) {
   return (
     <Modal open={open} onClose={onClose}>
@@ -449,6 +457,8 @@ function NewBudgetModal({
           placeholder="Ej: Presupuesto mensual"
           icon={FileText}
           name="descripcion"
+          value={descripcion}
+          onChange={(e) => onDescripcionChange(e.target.value)}
           autoFocus
         />
         <Input
@@ -457,6 +467,8 @@ function NewBudgetModal({
           placeholder="Ej: 500000"
           icon={CircleDollarSign}
           name="valor"
+          value={valor}
+          onChange={(e) => onValorChange(e.target.value)}
         />
         {error && (
           <div className="flex items-start gap-2 rounded-lg border border-rose-200 bg-rose-50 p-3 text-xs text-rose-700 dark:border-rose-900/50 dark:bg-rose-950/40 dark:text-rose-300">
@@ -1189,6 +1201,10 @@ export default function PerfilPage() {
         onSubmit={handleSubmit}
         creating={creating}
         error={error}
+        descripcion={descripcion}
+        valor={valor}
+        onDescripcionChange={setDescripcion}
+        onValorChange={setValor}
       />
 
       {toast && (
