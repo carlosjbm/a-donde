@@ -45,6 +45,40 @@ export interface Producto {
   imagen: string | null;
   id_categ: number;
   activo: boolean;
+  fech_act_precio: string | null;
+}
+
+export type ProductoPrecioFuente = "manual" | "compra" | "importacion" | "sistema";
+
+export interface ProductoPrecio {
+  id: number;
+  id_producto: number;
+  precio: number;
+  id_usuario: number | null;
+  fuente: ProductoPrecioFuente;
+  notas: string | null;
+  created_at: string;
+}
+
+export interface PrecioHistorialPunto {
+  periodo: string;
+  fecha_inicio: string;
+  promedio: number;
+  minimo: number;
+  maximo: number;
+  cantidad: number;
+}
+
+export type PrecioHistorialPeriodo = "semana" | "mes" | "ano";
+
+export interface PrecioHistorial {
+  nombre: string;
+  periodo: PrecioHistorialPeriodo;
+  precio_actual: number;
+  lugar_actual: string;
+  variacion_porcentaje: number;
+  tendencia: "sube" | "baja" | "estable";
+  puntos: PrecioHistorialPunto[];
 }
 
 export interface Compra {

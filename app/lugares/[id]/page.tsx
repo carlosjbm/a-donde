@@ -6,6 +6,8 @@ import { useAuth } from "@/contexts/auth-context";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Modal } from "@/components/ui/modal";
+import { PriceHistoryChart } from "@/components/productos/price-history-chart";
+import { UpdatePriceModal } from "@/components/productos/update-price-modal";
 import {
   Store,
   MapPin,
@@ -18,6 +20,9 @@ import {
   X,
   Package,
   CreditCard,
+  Search,
+  LineChart,
+  Pencil,
 } from "lucide-react";
 import type { Producto, Lugar, Presupuesto, CompraConProducto } from "@/types";
 
@@ -39,31 +44,58 @@ export default function LugarDetailPage() {
   const [confirmando, setConfirmando] = useState(false);
   const [compraExitosa, setCompraExitosa] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
+  const [search, setSearch] = useState("");
+  const [historyProducto, setHistoryProducto] = useState<Producto | null>(null);
+  const [priceEditProducto, setPriceEditProducto] = useState<Producto | null>(null);
 
   const highlightedProductId = Number(searchParams.get("producto")) || null;
   const productRefs = useRef<Record<number, HTMLDivElement | null>>({});
   const handledProductRef = useRef<number | null>(null);
 
   useEffect(() => {
+    let cancelled = false;
     async function load() {
       try {
         const lugarId = Number(params.id);
-        const [lugRes, prodRes] = await Promise.all([
-          fetch(`/api/lugares/${lugarId}`),
-          fetch(`/api/lugares/${lugarId}/productos`),
-        ]);
+        if (!Number.isInteger(lugarId) || lugarId <= 0) {
+          setLugar(null);
+          setProductos([]);
+          return;
+        }
 
+        const lugRes = await fetch(`/api/lugares/${lugarId}`);
         const lugJson = await lugRes.json();
-        if (lugJson.success) setLugar(lugJson.data);
+        if (cancelled) return;
 
+        if (!lugRes.ok || !lugJson.success) {
+          setLugar(null);
+          setProductos([]);
+          return;
+        }
+        setLugar(lugJson.data);
+
+        const prodRes = await fetch(`/api/lugares/${lugarId}/productos`);
         const prodJson = await prodRes.json();
-        if (prodJson.success) setProductos(prodJson.data);
+        if (cancelled) return;
+
+        if (prodRes.ok && prodJson.success) {
+          setProductos(prodJson.data);
+        } else {
+          setProductos([]);
+        }
       } catch {
+        if (!cancelled) {
+          setLugar(null);
+          setProductos([]);
+        }
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     }
     load();
+    return () => {
+      cancelled = true;
+    };
   }, [params.id]);
 
   useEffect(() => {
@@ -111,7 +143,7 @@ export default function LugarDetailPage() {
 
   const totalPresupuesto = presupuestos.reduce(
     (s, p) => s + Number(p.valor),
-    0
+    0,
   );
 
   function abrirModal(producto: Producto) {
@@ -184,11 +216,19 @@ export default function LugarDetailPage() {
     );
   }
 
-  const gastado = compras.reduce(
-    (s, c) => s + Number(c.producto_precio),
-    0
-  );
+  const gastado = compras.reduce((s, c) => s + Number(c.producto_precio), 0);
   const disponible = totalPresupuesto - gastado;
+
+  const normalize = (s: string) =>
+    s
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase();
+  const filteredProductos = search.trim()
+    ? productos.filter((p) =>
+        normalize(p.nombre).includes(normalize(search.trim())),
+      )
+    : productos;
 
   return (
     <div className="mx-auto flex w-full max-w-7xl flex-col gap-6 p-4 pt-12 sm:p-6">
@@ -196,8 +236,8 @@ export default function LugarDetailPage() {
         <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-emerald-50 dark:bg-emerald-950/50">
           <Store className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
         </div>
-        <div>
-          <div className="flex items-center gap-2">
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2">
             <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100">
               {lugar.nombre}
             </h1>
@@ -213,9 +253,7 @@ export default function LugarDetailPage() {
             ) : null}
           </div>
           {lugar.descripcion && (
-            <p className="mt-0.5 text-sm text-zinc-500">
-              {lugar.descripcion}
-            </p>
+            <p className="mt-0.5 text-sm text-zinc-500">{lugar.descripcion}</p>
           )}
           <p className="mt-1 flex items-center gap-1 text-xs text-zinc-400">
             <MapPin className="h-3.5 w-3.5" />
@@ -227,6 +265,28 @@ export default function LugarDetailPage() {
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="lg:col-span-2">
           <Card title="Productos">
+            {productos.length > 0 && (
+              <div className="relative mb-4">
+                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
+                <input
+                  type="text"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder="Buscar producto en este lugar..."
+                  className="w-full rounded-lg border border-zinc-300 bg-white py-2 pl-9 pr-9 text-sm text-zinc-900 placeholder-zinc-400 focus:border-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-500 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100 dark:placeholder-zinc-500"
+                />
+                {search && (
+                  <button
+                    type="button"
+                    onClick={() => setSearch("")}
+                    aria-label="Limpiar búsqueda"
+                    className="absolute right-2 top-1/2 flex h-6 w-6 -translate-y-1/2 items-center justify-center rounded-md text-zinc-400 transition-colors hover:bg-zinc-100 hover:text-zinc-700 dark:hover:bg-zinc-700 dark:hover:text-zinc-200"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                )}
+              </div>
+            )}
             {productos.length === 0 ? (
               <div className="flex flex-col items-center gap-2 py-8 text-center">
                 <Package className="h-10 w-10 text-zinc-300 dark:text-zinc-600" />
@@ -234,9 +294,24 @@ export default function LugarDetailPage() {
                   No hay productos registrados en este lugar.
                 </p>
               </div>
+            ) : filteredProductos.length === 0 ? (
+              <div className="flex flex-col items-center gap-2 py-8 text-center">
+                <Search className="h-10 w-10 text-zinc-300 dark:text-zinc-600" />
+                <p className="text-sm text-zinc-500">
+                  No se encontraron productos que coincidan con &ldquo;{search}
+                  &rdquo;.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setSearch("")}
+                  className="text-xs font-medium text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 dark:hover:text-emerald-300"
+                >
+                  Limpiar búsqueda
+                </button>
+              </div>
             ) : (
               <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-                {productos.map((producto) => {
+                {filteredProductos.map((producto) => {
                   const isHighlighted = highlightedProductId === producto.id;
                   return (
                     <div
@@ -244,39 +319,67 @@ export default function LugarDetailPage() {
                       ref={(el) => {
                         productRefs.current[producto.id] = el;
                       }}
-                      className={`flex items-center gap-3 rounded-lg border p-4 transition-all hover:bg-zinc-50 dark:hover:bg-zinc-800/50 ${
+                      className={`flex flex-col gap-3 rounded-lg border p-4 transition-all hover:bg-zinc-50 sm:flex-row sm:items-center sm:gap-3 dark:hover:bg-zinc-800/50 ${
                         isHighlighted
                           ? "border-amber-400 bg-amber-50 ring-2 ring-amber-300 ring-offset-2 dark:border-amber-500 dark:bg-amber-950/30 dark:ring-amber-500/50"
                           : "border-zinc-200 dark:border-zinc-700"
                       }`}
                     >
-                      <div
-                        className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${
-                          isHighlighted
-                            ? "bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-300"
-                            : "bg-zinc-100 text-zinc-500 dark:bg-zinc-800"
-                        }`}
-                      >
-                        <Package className="h-5 w-5" />
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate font-medium text-zinc-900 dark:text-zinc-100">
-                          {producto.nombre}
-                        </p>
-                        <p
-                          className={`text-sm font-semibold ${
+                      <div className="flex min-w-0 flex-1 items-center gap-3">
+                        <div
+                          className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${
                             isHighlighted
-                              ? "text-amber-700 dark:text-amber-300"
-                              : "text-zinc-600 dark:text-zinc-400"
+                              ? "bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-300"
+                              : "bg-zinc-100 text-zinc-500 dark:bg-zinc-800"
                           }`}
                         >
-                          ${Number(producto.precio).toLocaleString("es-CL")}
-                        </p>
+                          <Package className="h-5 w-5" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-1.5">
+                            <p className="truncate font-medium text-zinc-900 dark:text-zinc-100">
+                              {producto.nombre}
+                            </p>
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setHistoryProducto(producto);
+                              }}
+                              aria-label="Ver fluctuación de precio"
+                              title="Ver fluctuación de precio"
+                              className="shrink-0 rounded p-0.5 text-zinc-400 transition-colors hover:bg-zinc-100 hover:text-zinc-700 dark:hover:bg-zinc-800 dark:hover:text-zinc-200"
+                            >
+                              <LineChart className="h-3.5 w-3.5" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setPriceEditProducto(producto);
+                              }}
+                              aria-label="Actualizar precio"
+                              title="Actualizar precio"
+                              className="shrink-0 rounded p-0.5 text-zinc-400 transition-colors hover:bg-zinc-100 hover:text-zinc-700 dark:hover:bg-zinc-800 dark:hover:text-zinc-200"
+                            >
+                              <Pencil className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
+                          <p
+                            className={`text-sm font-semibold ${
+                              isHighlighted
+                                ? "text-amber-700 dark:text-amber-300"
+                                : "text-zinc-600 dark:text-zinc-400"
+                            }`}
+                          >
+                            ${Number(producto.precio).toLocaleString("es-CL")}
+                          </p>
+                        </div>
                       </div>
                       <Button
                         onClick={() => abrirModal(producto)}
                         size="sm"
-                        className="shrink-0"
+                        className="w-full shrink-0 sm:w-auto"
                       >
                         <ShoppingCart className="mr-1.5 h-4 w-4" />
                         Comprar
@@ -414,7 +517,7 @@ export default function LugarDetailPage() {
                 onClick={confirmarCompra}
               >
                 <ShoppingCart className="mr-1.5 h-4 w-4" />
-                Confirmar compra
+                Confirmar
               </Button>
             </div>
           </div>
@@ -449,6 +552,53 @@ export default function LugarDetailPage() {
           </div>
         )}
       </Modal>
+
+      <Modal
+        open={!!historyProducto}
+        onClose={() => setHistoryProducto(null)}
+      >
+        {historyProducto && (
+          <div className="flex flex-col gap-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">
+                  {historyProducto.nombre}
+                </h3>
+                <p className="text-xs text-zinc-500">
+                  Evolución del precio basada en todos los registros con este nombre
+                </p>
+              </div>
+              <button
+                onClick={() => setHistoryProducto(null)}
+                aria-label="Cerrar"
+                className="rounded-lg p-1 text-zinc-400 hover:bg-zinc-100 hover:text-zinc-600 dark:hover:bg-zinc-800"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <PriceHistoryChart
+              nombre={historyProducto.nombre}
+              excludeId={historyProducto.id}
+            />
+          </div>
+        )}
+      </Modal>
+
+      <UpdatePriceModal
+        open={!!priceEditProducto}
+        lugarId={lugar.id}
+        producto={priceEditProducto}
+        onClose={() => setPriceEditProducto(null)}
+        onUpdated={(nuevoPrecio) => {
+          setProductos((prev) =>
+            prev.map((p) =>
+              p.id === priceEditProducto?.id
+                ? { ...p, precio: nuevoPrecio, fech_act_precio: new Date().toISOString() }
+                : p
+            )
+          );
+        }}
+      />
     </div>
   );
 }
