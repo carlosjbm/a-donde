@@ -21,7 +21,7 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  if (publicApiRoutes.some((route) => pathname.startsWith(route))) {
+  if (publicApiRoutes.some((route) => pathname === route)) {
     return NextResponse.next();
   }
 
