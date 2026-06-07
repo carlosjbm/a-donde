@@ -24,6 +24,119 @@ import {
   LineChart,
   Pencil,
 } from "lucide-react";
+
+function CopyIcon(props: React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+      {...props}
+    >
+      <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+      <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+    </svg>
+  );
+}
+
+function ChevronDownIcon(props: React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+      {...props}
+    >
+      <polyline points="6 9 12 15 18 9" />
+    </svg>
+  );
+}
+
+function ExternalLinkIcon(props: React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+      {...props}
+    >
+      <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+      <polyline points="15 3 21 3 21 9" />
+      <line x1="10" y1="14" x2="21" y2="3" />
+    </svg>
+  );
+}
+
+function CheckIcon(props: React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+      {...props}
+    >
+      <polyline points="20 6 9 17 4 12" />
+    </svg>
+  );
+}
+
+function CoordField({
+  label,
+  value,
+  isCopied,
+  onCopy,
+}: {
+  label: string;
+  value: number;
+  isCopied: boolean;
+  onCopy: () => void;
+}) {
+  return (
+    <div className="group rounded-md border border-zinc-200 bg-zinc-50 px-2 py-1.5 dark:border-zinc-700 dark:bg-zinc-800/60">
+      <p className="text-[10px] font-medium uppercase tracking-wider text-zinc-400">
+        {label}
+      </p>
+      <div className="flex items-center justify-between gap-1">
+        <span className="truncate font-mono text-xs text-zinc-700 dark:text-zinc-200">
+          {value}
+        </span>
+        <button
+          type="button"
+          onClick={onCopy}
+          aria-label={`Copiar ${label.toLowerCase()}`}
+          title={isCopied ? "Copiado" : "Copiar"}
+          className={`flex h-6 w-6 shrink-0 items-center justify-center rounded transition-colors ${
+            isCopied
+              ? "text-emerald-600 dark:text-emerald-400"
+              : "text-zinc-400 hover:bg-zinc-200 hover:text-zinc-700 dark:hover:bg-zinc-700 dark:hover:text-zinc-200"
+          }`}
+        >
+          {isCopied ? (
+            <CheckIcon className="h-3 w-3" />
+          ) : (
+            <CopyIcon className="h-3 w-3" />
+          )}
+        </button>
+      </div>
+    </div>
+  );
+}
 import type { Producto, Lugar, Presupuesto, CompraConProducto } from "@/types";
 
 export default function LugarDetailPage() {
@@ -47,6 +160,9 @@ export default function LugarDetailPage() {
   const [search, setSearch] = useState("");
   const [historyProducto, setHistoryProducto] = useState<Producto | null>(null);
   const [priceEditProducto, setPriceEditProducto] = useState<Producto | null>(null);
+  const [showLocation, setShowLocation] = useState(false);
+  const [copiedField, setCopiedField] = useState<"lat" | "lng" | null>(null);
+  const copyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const highlightedProductId = Number(searchParams.get("producto")) || null;
   const productRefs = useRef<Record<number, HTMLDivElement | null>>({});
@@ -154,6 +270,8 @@ export default function LugarDetailPage() {
     setSelectedProducto(producto);
     setCompraExitosa(false);
     setErrorMsg("");
+    setShowLocation(false);
+    setCopiedField(null);
   }
 
   async function confirmarCompra() {
@@ -198,7 +316,41 @@ export default function LugarDetailPage() {
     setSelectedProducto(null);
     setCompraExitosa(false);
     setErrorMsg("");
+    setShowLocation(false);
+    setCopiedField(null);
+    if (copyTimeoutRef.current) {
+      clearTimeout(copyTimeoutRef.current);
+      copyTimeoutRef.current = null;
+    }
   }
+
+  async function copyToClipboard(value: string, field: "lat" | "lng") {
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(value);
+      } else {
+        const textarea = document.createElement("textarea");
+        textarea.value = value;
+        textarea.style.position = "fixed";
+        textarea.style.opacity = "0";
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand("copy");
+        document.body.removeChild(textarea);
+      }
+      setCopiedField(field);
+      if (copyTimeoutRef.current) clearTimeout(copyTimeoutRef.current);
+      copyTimeoutRef.current = setTimeout(() => setCopiedField(null), 1500);
+    } catch {
+      // ignore
+    }
+  }
+
+  useEffect(() => {
+    return () => {
+      if (copyTimeoutRef.current) clearTimeout(copyTimeoutRef.current);
+    };
+  }, []);
 
   if (loading) {
     return (
@@ -446,15 +598,101 @@ export default function LugarDetailPage() {
               <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-emerald-50 dark:bg-emerald-950/50">
                 <Package className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
               </div>
-              <div>
+              <div className="min-w-0 flex-1">
                 <p className="text-sm text-zinc-500">Producto</p>
-                <p className="text-lg font-bold text-zinc-900 dark:text-zinc-100">
+                <p className="truncate text-lg font-bold text-zinc-900 dark:text-zinc-100">
                   {selectedProducto.nombre}
                 </p>
                 <p className="text-xl font-semibold text-emerald-600 dark:text-emerald-400">
                   ${Number(selectedProducto.precio).toLocaleString("es-CL")}
                 </p>
               </div>
+            </div>
+
+            <div className="rounded-lg border border-zinc-200 dark:border-zinc-700">
+              <button
+                type="button"
+                onClick={() => setShowLocation((v) => !v)}
+                aria-expanded={showLocation}
+                aria-controls="buy-location-panel"
+                className="flex w-full items-center justify-between gap-2 rounded-lg px-3 py-2.5 text-left transition-colors hover:bg-zinc-50 dark:hover:bg-zinc-800/50"
+              >
+                <span className="flex items-center gap-2 text-sm font-medium text-zinc-700 dark:text-zinc-200">
+                  <span className="flex h-7 w-7 items-center justify-center rounded-md bg-sky-50 text-sky-600 dark:bg-sky-950/60 dark:text-sky-400">
+                    <MapPin className="h-3.5 w-3.5" />
+                  </span>
+                  Ver ubicación del lugar
+                </span>
+                <ChevronDownIcon
+                  className={`h-4 w-4 text-zinc-400 transition-transform duration-200 ${
+                    showLocation ? "rotate-180" : ""
+                  }`}
+                />
+              </button>
+              {showLocation && (
+                <div
+                  id="buy-location-panel"
+                  className="space-y-3 border-t border-zinc-200 px-3 py-3 dark:border-zinc-700"
+                >
+                  <div className="flex items-start gap-2">
+                    <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0 text-zinc-400" />
+                    <p className="text-sm text-zinc-700 dark:text-zinc-300">
+                      {lugar.direccion || (
+                        <span className="italic text-zinc-400">
+                          Sin dirección registrada
+                        </span>
+                      )}
+                    </p>
+                  </div>
+
+                  {lugar.latitud !== null && lugar.longitud !== null ? (
+                    <>
+                      <div className="grid grid-cols-2 gap-2">
+                        <CoordField
+                          label="Latitud"
+                          value={lugar.latitud}
+                          isCopied={copiedField === "lat"}
+                          onCopy={() =>
+                            copyToClipboard(String(lugar.latitud), "lat")
+                          }
+                        />
+                        <CoordField
+                          label="Longitud"
+                          value={lugar.longitud}
+                          isCopied={copiedField === "lng"}
+                          onCopy={() =>
+                            copyToClipboard(String(lugar.longitud), "lng")
+                          }
+                        />
+                      </div>
+                      <div className="flex flex-wrap gap-2 pt-1">
+                        <a
+                          href={`https://www.google.com/maps/search/?api=1&query=${lugar.latitud},${lugar.longitud}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1.5 rounded-md border border-zinc-200 bg-white px-2.5 py-1.5 text-xs font-medium text-zinc-700 transition-colors hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200 dark:hover:bg-zinc-700"
+                        >
+                          <ExternalLinkIcon className="h-3 w-3" />
+                          Abrir en Google Maps
+                        </a>
+                        <a
+                          href={`https://waze.com/ul?ll=${lugar.latitud},${lugar.longitud}&navigate=yes`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1.5 rounded-md border border-zinc-200 bg-white px-2.5 py-1.5 text-xs font-medium text-zinc-700 transition-colors hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200 dark:hover:bg-zinc-700"
+                        >
+                          <ExternalLinkIcon className="h-3 w-3" />
+                          Abrir en Waze
+                        </a>
+                      </div>
+                    </>
+                  ) : (
+                    <p className="text-xs italic text-zinc-400">
+                      Este lugar no tiene coordenadas registradas.
+                    </p>
+                  )}
+                </div>
+              )}
             </div>
 
             <div className="space-y-2 rounded-lg bg-zinc-50 p-4 dark:bg-zinc-800">
