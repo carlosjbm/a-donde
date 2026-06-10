@@ -59,17 +59,44 @@ export function Navbar() {
 
   return (
     <nav className="sticky top-0 z-50 border-b border-zinc-200 bg-white/80 backdrop-blur-md dark:border-zinc-800 dark:bg-zinc-900/80">
-      <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-2 px-4 pb-3 pt-3 md:h-14 md:flex-nowrap md:pb-0 md:pt-0">
+      <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-1.5 px-4 pb-3 pt-3 md:h-14 md:gap-2 md:flex-nowrap md:pb-0 md:pt-0">
         <Link
           href="/"
-          className="order-1 shrink-0 rounded-lg p-2 text-zinc-600 transition-colors hover:bg-zinc-100 hover:text-zinc-900 focus:outline-none focus:ring-2 focus:ring-zinc-400 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-100 dark:focus:ring-zinc-500"
+          className="order-1 hidden shrink-0 rounded-lg p-1.5 text-zinc-600 transition-colors hover:bg-zinc-100 hover:text-zinc-900 focus:outline-none focus:ring-2 focus:ring-zinc-400 md:inline-flex md:p-2 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-100 dark:focus:ring-zinc-500"
         >
           <Home className="h-5 w-5" />
         </Link>
 
+        {!loading && user && (
+          <>
+            <Link
+              href="/perfil"
+              className="order-1 flex shrink-0 items-center gap-1 rounded-lg px-1.5 py-1 text-sm text-zinc-600 transition-colors hover:bg-zinc-100 hover:text-zinc-900 md:order-4 md:gap-1.5 md:px-2 md:py-1.5 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
+            >
+              <User className="h-4 w-4" />
+              <span className="hidden md:inline">{user.nombre}</span>
+            </Link>
+            <Button
+              variant="secondary"
+              onClick={logout}
+              className="order-1 px-1.5 md:order-4 md:px-3"
+              title="Cerrar sesión"
+            >
+              <LogOut className="h-4 w-4 md:mr-1.5" />
+              <span className="hidden md:inline">Salir</span>
+            </Button>
+          </>
+        )}
+
         <SearchBar className="order-3 w-full md:order-2 md:flex-1" />
 
-        <div className="order-2 ml-auto flex shrink-0 items-center gap-3 md:order-3">
+        <div className="order-2 flex w-full items-center justify-evenly gap-1 md:w-auto md:justify-end md:gap-3 md:order-3 md:ml-auto">
+          <Link
+            href="/"
+            className="md:hidden rounded-lg p-1.5 text-zinc-600 transition-colors hover:bg-zinc-100 hover:text-zinc-900 focus:outline-none focus:ring-2 focus:ring-zinc-400 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-100 dark:focus:ring-zinc-500"
+          >
+            <Home className="h-5 w-5" />
+          </Link>
           {loading ? null : user ? (
             <>
               {disponible !== null && (
@@ -87,7 +114,7 @@ export function Navbar() {
                   </Link>
                   <Link
                     href={"/perfil#packs"}
-                    className="relative rounded-lg p-2 text-zinc-600 transition-colors hover:bg-zinc-100 hover:text-zinc-900 focus:outline-none focus:ring-2 focus:ring-zinc-400 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-100 dark:focus:ring-zinc-500"
+                    className="relative rounded-lg p-1.5 text-zinc-600 transition-colors hover:bg-zinc-100 hover:text-zinc-900 focus:outline-none focus:ring-2 focus:ring-zinc-400 md:p-2 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-100 dark:focus:ring-zinc-500"
                   >
                     <Bell className="h-5 w-5" />
                     {pendingCount > 0 && (
@@ -98,19 +125,12 @@ export function Navbar() {
                   </Link>
                   <Link
                     href={"/lugares"}
-                    className="rounded-lg p-2 text-zinc-600 transition-colors hover:bg-zinc-100 hover:text-zinc-900 focus:outline-none focus:ring-2 focus:ring-zinc-400 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-100 dark:focus:ring-zinc-500"
+                    className="rounded-lg p-1.5 text-zinc-600 transition-colors hover:bg-zinc-100 hover:text-zinc-900 focus:outline-none focus:ring-2 focus:ring-zinc-400 md:p-2 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-100 dark:focus:ring-zinc-500"
                   >
                     <ShoppingCart className="h-5 w-5" />
                   </Link>
                 </>
               )}
-              <Link
-                href="/perfil"
-                className="flex items-center gap-1.5 text-sm text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
-              >
-                <User className="h-4 w-4" />
-                {user.nombre}
-              </Link>
               {user.rol_id === 1 && (
                 <Link
                   href="/admin"
@@ -120,10 +140,6 @@ export function Navbar() {
                   Admin
                 </Link>
               )}
-              <Button variant="secondary" onClick={logout}>
-                <LogOut className="mr-1.5 h-4 w-4" />
-                Salir
-              </Button>
             </>
           ) : (
             <>

@@ -1,9 +1,13 @@
 import { NextRequest } from "next/server";
 import * as usuarioModel from "@/models/usuario";
 import { successResponse, errorResponse } from "@/lib/utils";
+import { requireAdmin, unauthorizedResponse } from "@/lib/admin-auth";
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
+    const admin = await requireAdmin(request);
+    if (!admin) return unauthorizedResponse();
+
     const usuarios = await usuarioModel.findAll();
     return successResponse(usuarios);
   } catch (error) {
@@ -14,8 +18,11 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   try {
+    const admin = await requireAdmin(request);
+    if (!admin) return unauthorizedResponse();
+
     const body = await request.json();
-    const { nombre, email, password, rol_id } = body;
+    const { nombre, email, password } = body;
 
     if (!nombre || !email || !password) {
       return errorResponse("Nombre, email y password son obligatorios");
@@ -30,7 +37,7 @@ export async function POST(request: NextRequest) {
       nombre,
       email,
       password,
-      rol_id:1,
+      rol_id: 1,
     });
     return successResponse(usuario, 201);
   } catch (error) {
