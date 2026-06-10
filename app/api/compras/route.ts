@@ -3,19 +3,6 @@ import * as compraModel from "@/models/compra";
 import * as packModel from "@/models/pack";
 import { successResponse, errorResponse } from "@/lib/utils";
 
-export async function GET(request: NextRequest) {
-  try {
-    const userId = request.headers.get("x-user-id");
-    if (!userId) return errorResponse("No autenticado", 401);
-
-    const compras = await compraModel.findByUserId(Number(userId));
-    return successResponse(compras);
-  } catch (error) {
-    console.error("Error al obtener compras:", error);
-    return errorResponse("Error al obtener compras", 500);
-  }
-}
-
 export async function POST(request: NextRequest) {
   try {
     const userId = request.headers.get("x-user-id");

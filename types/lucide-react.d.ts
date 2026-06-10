@@ -70,4 +70,7 @@ declare module "lucide-react" {
   export const Minus: Icon;
   export const Pencil: Icon;
   export const DollarSign: Icon;
+  export const List: Icon;
+  export const Trash2: Icon;
+  export const Bell: Icon;
 }

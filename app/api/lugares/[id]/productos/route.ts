@@ -61,8 +61,8 @@ export async function POST(
       imagen: imagen || null,
       escencial: Boolean(escencial),
       id_categ: id_categ || null,
-      id_usuario: Number(userId),
-      id_lugar: lugarId,
+      idUsuario: Number(userId),
+      idLugar: lugarId,
       fuente: "manual",
     });
 

@@ -109,7 +109,8 @@ const KPI_THEMES: Record<
     surface:
       "bg-[radial-gradient(120%_120%_at_0%_0%,rgba(16,185,129,0.18)_0%,rgba(16,185,129,0.02)_55%,rgba(255,255,255,0.85)_100%)] dark:bg-[radial-gradient(120%_120%_at_0%_0%,rgba(16,185,129,0.22)_0%,rgba(16,185,129,0.04)_55%,rgba(24,24,27,0.85)_100%)]",
     ring: "ring-emerald-200/60 dark:ring-emerald-900/40",
-    iconBg: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/50 dark:text-emerald-300",
+    iconBg:
+      "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/50 dark:text-emerald-300",
     text: "text-emerald-700 dark:text-emerald-300",
   },
   rose: {
@@ -123,14 +124,16 @@ const KPI_THEMES: Record<
     surface:
       "bg-[radial-gradient(120%_120%_at_100%_100%,rgba(245,158,11,0.18)_0%,rgba(245,158,11,0.02)_55%,rgba(255,255,255,0.85)_100%)] dark:bg-[radial-gradient(120%_120%_at_100%_100%,rgba(245,158,11,0.22)_0%,rgba(245,158,11,0.04)_55%,rgba(24,24,27,0.85)_100%)]",
     ring: "ring-amber-200/60 dark:ring-amber-900/40",
-    iconBg: "bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-300",
+    iconBg:
+      "bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-300",
     text: "text-amber-700 dark:text-amber-300",
   },
   indigo: {
     surface:
       "bg-[radial-gradient(120%_120%_at_0%_100%,rgba(99,102,241,0.18)_0%,rgba(99,102,241,0.02)_55%,rgba(255,255,255,0.85)_100%)] dark:bg-[radial-gradient(120%_120%_at_0%_100%,rgba(99,102,241,0.22)_0%,rgba(99,102,241,0.04)_55%,rgba(24,24,27,0.85)_100%)]",
     ring: "ring-indigo-200/60 dark:ring-indigo-900/40",
-    iconBg: "bg-indigo-100 text-indigo-700 dark:bg-indigo-900/50 dark:text-indigo-300",
+    iconBg:
+      "bg-indigo-100 text-indigo-700 dark:bg-indigo-900/50 dark:text-indigo-300",
     text: "text-indigo-700 dark:text-indigo-300",
   },
   zinc: {
@@ -547,11 +550,11 @@ export default function PerfilPage() {
 
   const totalPresupuesto = presupuestos.reduce(
     (sum, p) => sum + Number(p.valor),
-    0
+    0,
   );
   const totalGastado = compras.reduce(
     (sum, c) => sum + Number(c.producto_precio),
-    0
+    0,
   );
   const disponible = totalPresupuesto - totalGastado;
   const enDespensa = compras.filter((c) => !c.agotado).length;
@@ -590,13 +593,10 @@ export default function PerfilPage() {
     return list;
   }, [compras, filter, search]);
 
-  const showToast = useCallback(
-    (type: "success" | "error", msg: string) => {
-      setToast({ type, msg });
-      window.setTimeout(() => setToast(null), 2400);
-    },
-    [],
-  );
+  const showToast = useCallback((type: "success" | "error", msg: string) => {
+    setToast({ type, msg });
+    window.setTimeout(() => setToast(null), 2400);
+  }, []);
 
   const toggleAgotado = useCallback(
     async (compra: CompraConProducto, next: boolean) => {
@@ -1108,7 +1108,9 @@ export default function PerfilPage() {
                 {packs.map((pack, i) => {
                   const pct =
                     pack.total_productos > 0
-                      ? Math.round((pack.comprados / pack.total_productos) * 100)
+                      ? Math.round(
+                          (pack.comprados / pack.total_productos) * 100,
+                        )
                       : 0;
                   return (
                     <div
@@ -1131,15 +1133,16 @@ export default function PerfilPage() {
                             {pack.pendientes > 0 && (
                               <span className="inline-flex items-center gap-1 rounded-full bg-rose-100 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-rose-700 dark:bg-rose-950/60 dark:text-rose-300">
                                 <Bell className="h-2.5 w-2.5" />
-                                {pack.pendientes} pendientes
+                                {pack.pendientes}
                               </span>
                             )}
-                            {pack.pendientes === 0 && pack.total_productos > 0 && (
-                              <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300">
-                                <Check className="h-2.5 w-2.5" />
-                                Completado
-                              </span>
-                            )}
+                            {pack.pendientes === 0 &&
+                              pack.total_productos > 0 && (
+                                <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300">
+                                  <Check className="h-2.5 w-2.5" />
+                                  Completado
+                                </span>
+                              )}
                           </div>
                           <div className="mt-1 flex items-center gap-2">
                             <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-zinc-200 dark:bg-zinc-700">
@@ -1162,15 +1165,21 @@ export default function PerfilPage() {
                         <button
                           type="button"
                           onClick={async () => {
-                            if (!confirm(`¿Eliminar pack "${pack.nombre}"?`)) return;
+                            if (!confirm(`¿Eliminar pack "${pack.nombre}"?`))
+                              return;
                             try {
                               const res = await fetch(`/api/packs/${pack.id}`, {
                                 method: "DELETE",
                               });
                               const json = await res.json();
                               if (json.success) {
-                                setPacks((prev) => prev.filter((p) => p.id !== pack.id));
-                                showToast("success", `Pack "${pack.nombre}" eliminado`);
+                                setPacks((prev) =>
+                                  prev.filter((p) => p.id !== pack.id),
+                                );
+                                showToast(
+                                  "success",
+                                  `Pack "${pack.nombre}" eliminado`,
+                                );
                               }
                             } catch {
                               showToast("error", "Error al eliminar pack");
@@ -1406,7 +1415,13 @@ export default function PerfilPage() {
         onValorChange={setValor}
       />
 
-      <Modal open={showNewPackForm} onClose={() => { setShowNewPackForm(false); setNewPackName(""); }}>
+      <Modal
+        open={showNewPackForm}
+        onClose={() => {
+          setShowNewPackForm(false);
+          setNewPackName("");
+        }}
+      >
         <div className="flex flex-col gap-4">
           <div className="flex items-start justify-between">
             <div className="flex items-center gap-3">
@@ -1424,7 +1439,10 @@ export default function PerfilPage() {
             </div>
             <button
               type="button"
-              onClick={() => { setShowNewPackForm(false); setNewPackName(""); }}
+              onClick={() => {
+                setShowNewPackForm(false);
+                setNewPackName("");
+              }}
               className="rounded-lg p-1.5 text-zinc-400 transition-colors hover:bg-zinc-100 hover:text-zinc-700 dark:hover:bg-zinc-800 dark:hover:text-zinc-200"
               aria-label="Cerrar"
             >
@@ -1474,7 +1492,10 @@ export default function PerfilPage() {
                 type="button"
                 variant="secondary"
                 className="flex-1"
-                onClick={() => { setShowNewPackForm(false); setNewPackName(""); }}
+                onClick={() => {
+                  setShowNewPackForm(false);
+                  setNewPackName("");
+                }}
               >
                 Cancelar
               </Button>
