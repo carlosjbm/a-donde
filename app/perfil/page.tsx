@@ -1185,7 +1185,7 @@ export default function PerfilPage() {
                               showToast("error", "Error al eliminar pack");
                             }
                           }}
-                          className="shrink-0 rounded-lg p-1.5 text-zinc-400 opacity-0 transition-all hover:bg-zinc-100 hover:text-rose-600 group-hover:opacity-100 dark:hover:bg-zinc-800 dark:hover:text-rose-400"
+                          className="shrink-0 rounded-lg p-1.5 text-zinc-400 transition-all hover:bg-zinc-100 hover:text-rose-600 sm:opacity-0 sm:group-hover:opacity-100 dark:hover:bg-zinc-800 dark:hover:text-rose-400"
                           aria-label={`Eliminar pack ${pack.nombre}`}
                         >
                           <Trash2 className="h-4 w-4" />
