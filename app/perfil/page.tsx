@@ -41,6 +41,16 @@ function formatCLP(value: number): string {
   return `$${value.toLocaleString("es-CL")}`;
 }
 
+function formatCompactCLP(value: number): string {
+  if (value >= 1_000_000) {
+    return `$${(value / 1_000_000).toFixed(1).replace(/\.0$/, "")}M`;
+  }
+  if (value >= 1_000) {
+    return `$${(value / 1_000).toFixed(1).replace(/\.0$/, "")}K`;
+  }
+  return `$${value}`;
+}
+
 function formatFullDateTime(value: string | Date | null | undefined): string {
   if (!value) return "";
   const d = typeof value === "string" ? new Date(value) : value;
@@ -179,7 +189,7 @@ function KpiCard({
             {label}
           </p>
           <p
-            className={`mt-2 truncate text-2xl font-bold tracking-tight sm:text-3xl ${t.text}`}
+            className={`mt-2 whitespace-nowrap text-2xl font-bold tracking-tight sm:text-3xl ${t.text}`}
           >
             {value}
           </p>
@@ -789,7 +799,7 @@ export default function PerfilPage() {
                 <KpiCard
                   icon={TrendingUp}
                   label="Disponible"
-                  value={formatCLP(Math.max(0, disponible))}
+                  value={formatCompactCLP(Math.max(0, disponible))}
                   theme={disponible < 0 ? "rose" : "emerald"}
                   sub={
                     totalPresupuesto > 0
@@ -801,7 +811,7 @@ export default function PerfilPage() {
                 <KpiCard
                   icon={TrendingDown}
                   label="Gastado"
-                  value={formatCLP(totalGastado)}
+                  value={formatCompactCLP(totalGastado)}
                   theme="rose"
                   sub={
                     totalCompras > 0
@@ -1162,34 +1172,39 @@ export default function PerfilPage() {
                             </span>
                           </div>
                         </div>
-                        <button
-                          type="button"
-                          onClick={async () => {
-                            if (!confirm(`¿Eliminar pack "${pack.nombre}"?`))
-                              return;
-                            try {
-                              const res = await fetch(`/api/packs/${pack.id}`, {
-                                method: "DELETE",
-                              });
-                              const json = await res.json();
-                              if (json.success) {
-                                setPacks((prev) =>
-                                  prev.filter((p) => p.id !== pack.id),
+                        {pack.pendientes === 0 && (
+                          <button
+                            type="button"
+                            onClick={async () => {
+                              if (!confirm(`¿Eliminar pack "${pack.nombre}"?`))
+                                return;
+                              try {
+                                const res = await fetch(
+                                  `/api/packs/${pack.id}`,
+                                  {
+                                    method: "DELETE",
+                                  },
                                 );
-                                showToast(
-                                  "success",
-                                  `Pack "${pack.nombre}" eliminado`,
-                                );
+                                const json = await res.json();
+                                if (json.success) {
+                                  setPacks((prev) =>
+                                    prev.filter((p) => p.id !== pack.id),
+                                  );
+                                  showToast(
+                                    "success",
+                                    `Pack "${pack.nombre}" eliminado`,
+                                  );
+                                }
+                              } catch {
+                                showToast("error", "Error al eliminar pack");
                               }
-                            } catch {
-                              showToast("error", "Error al eliminar pack");
-                            }
-                          }}
-                          className="shrink-0 rounded-lg p-1.5 text-zinc-400 transition-all hover:bg-zinc-100 hover:text-rose-600 sm:opacity-0 sm:group-hover:opacity-100 dark:hover:bg-zinc-800 dark:hover:text-rose-400"
-                          aria-label={`Eliminar pack ${pack.nombre}`}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
+                            }}
+                            className="shrink-0 rounded-lg p-1.5 text-zinc-400 transition-all hover:bg-zinc-100 hover:text-rose-600 sm:opacity-0 sm:group-hover:opacity-100 dark:hover:bg-zinc-800 dark:hover:text-rose-400"
+                            aria-label={`Eliminar pack ${pack.nombre}`}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        )}
                       </div>
 
                       {pack.productos.length > 0 && (
