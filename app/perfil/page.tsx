@@ -7,7 +7,7 @@ import { Switch } from "@/components/ui/switch";
 import { Modal } from "@/components/ui/modal";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, FormEvent, useCallback, useMemo } from "react";
-import type { Presupuesto, CompraConProducto } from "@/types";
+import type { Presupuesto, CompraConProducto, UserPack } from "@/types";
 import {
   Mail,
   Shield,
@@ -30,6 +30,9 @@ import {
   Store,
   Search,
   Bookmark,
+  List,
+  Trash2,
+  Bell,
 } from "lucide-react";
 
 type FilterTab = "todas" | "despensa" | "agotadas";
@@ -501,6 +504,7 @@ export default function PerfilPage() {
 
   const [presupuestos, setPresupuestos] = useState<Presupuesto[]>([]);
   const [compras, setCompras] = useState<CompraConProducto[]>([]);
+  const [packs, setPacks] = useState<UserPack[]>([]);
   const [loadingData, setLoadingData] = useState(true);
   const [pendingAgotado, setPendingAgotado] = useState<Set<number>>(new Set());
   const [filter, setFilter] = useState<FilterTab>("todas");
@@ -511,6 +515,9 @@ export default function PerfilPage() {
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState("");
   const [showForm, setShowForm] = useState(false);
+  const [showNewPackForm, setShowNewPackForm] = useState(false);
+  const [newPackName, setNewPackName] = useState("");
+  const [creatingPack, setCreatingPack] = useState(false);
   const [toast, setToast] = useState<{
     type: "success" | "error";
     msg: string;
@@ -527,10 +534,12 @@ export default function PerfilPage() {
     Promise.all([
       fetch("/api/presupuestos/mine").then((r) => r.json()),
       fetch("/api/compras/mine").then((r) => r.json()),
+      fetch("/api/packs/mine").then((r) => r.json()),
     ])
-      .then(([presJson, compJson]) => {
+      .then(([presJson, compJson, packJson]) => {
         if (presJson.success) setPresupuestos(presJson.data);
         if (compJson.success) setCompras(compJson.data);
+        if (packJson.success) setPacks(packJson.data);
       })
       .catch(() => {})
       .finally(() => setLoadingData(false));
@@ -1037,6 +1046,196 @@ export default function PerfilPage() {
           </section>
         </div>
 
+        {/* MIS PACKS */}
+        <section
+          id="packs"
+          className="overflow-hidden rounded-2xl border border-zinc-200/70 bg-white shadow-sm dark:border-zinc-800/60 dark:bg-zinc-950"
+          style={{ animation: "fadeInUp 0.5s ease 0.2s both" }}
+        >
+          <div className="flex items-center justify-between gap-3 border-b border-zinc-200/70 px-5 py-4 dark:border-zinc-800/60 sm:px-6">
+            <div className="flex items-center gap-2.5">
+              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-violet-100 text-violet-700 dark:bg-violet-950/60 dark:text-violet-300">
+                <List className="h-4.5 w-4.5" />
+              </div>
+              <div>
+                <h2 className="text-base font-semibold text-zinc-900 dark:text-zinc-100">
+                  Mis packs
+                </h2>
+                <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                  {packs.length > 0
+                    ? `${packs.reduce((s, p) => s + p.pendientes, 0)} productos pendientes`
+                    : "Crea listas de compras"}
+                </p>
+              </div>
+            </div>
+            <Button
+              onClick={() => setShowNewPackForm(true)}
+              size="sm"
+              variant="primary"
+            >
+              <Plus className="mr-1 h-3.5 w-3.5" />
+              Nuevo pack
+            </Button>
+          </div>
+
+          <div className="p-5 sm:p-6">
+            {loadingData ? (
+              <SkeletonList rows={2} />
+            ) : packs.length === 0 ? (
+              <div className="flex flex-col items-center gap-3 py-8 text-center">
+                <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-violet-50 text-violet-600 dark:bg-violet-950/40 dark:text-violet-400">
+                  <List className="h-7 w-7" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                    Aún no tienes packs
+                  </p>
+                  <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
+                    Crea un pack con productos para planificar tus compras.
+                  </p>
+                </div>
+                <Button
+                  size="sm"
+                  onClick={() => setShowNewPackForm(true)}
+                  className="mt-1"
+                >
+                  <Plus className="mr-1 h-3.5 w-3.5" />
+                  Crear pack
+                </Button>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {packs.map((pack, i) => {
+                  const pct =
+                    pack.total_productos > 0
+                      ? Math.round((pack.comprados / pack.total_productos) * 100)
+                      : 0;
+                  return (
+                    <div
+                      key={pack.id}
+                      className="group overflow-hidden rounded-xl border border-zinc-200/70 bg-white transition-all hover:border-zinc-300 hover:shadow-sm dark:border-zinc-800/60 dark:bg-zinc-900/40 dark:hover:border-zinc-700"
+                      style={{
+                        animation: "fadeInUp 0.4s ease both",
+                        animationDelay: `${i * 60}ms`,
+                      }}
+                    >
+                      <div className="flex items-center gap-3 px-4 py-3 sm:px-5">
+                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-violet-100 text-violet-700 transition-transform group-hover:scale-110 group-hover:rotate-3 dark:bg-violet-950/60 dark:text-violet-300">
+                          <List className="h-4.5 w-4.5" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2">
+                            <p className="truncate text-sm font-semibold text-zinc-900 dark:text-zinc-100">
+                              {pack.nombre}
+                            </p>
+                            {pack.pendientes > 0 && (
+                              <span className="inline-flex items-center gap-1 rounded-full bg-rose-100 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-rose-700 dark:bg-rose-950/60 dark:text-rose-300">
+                                <Bell className="h-2.5 w-2.5" />
+                                {pack.pendientes} pendientes
+                              </span>
+                            )}
+                            {pack.pendientes === 0 && pack.total_productos > 0 && (
+                              <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300">
+                                <Check className="h-2.5 w-2.5" />
+                                Completado
+                              </span>
+                            )}
+                          </div>
+                          <div className="mt-1 flex items-center gap-2">
+                            <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-zinc-200 dark:bg-zinc-700">
+                              <div
+                                className={`h-full rounded-full transition-all duration-700 ${
+                                  pct === 100
+                                    ? "bg-emerald-500"
+                                    : pct > 50
+                                      ? "bg-violet-500"
+                                      : "bg-amber-500"
+                                }`}
+                                style={{ width: `${pct}%` }}
+                              />
+                            </div>
+                            <span className="shrink-0 text-[10px] font-medium tabular-nums text-zinc-500 dark:text-zinc-400">
+                              {pack.comprados}/{pack.total_productos}
+                            </span>
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            if (!confirm(`¿Eliminar pack "${pack.nombre}"?`)) return;
+                            try {
+                              const res = await fetch(`/api/packs/${pack.id}`, {
+                                method: "DELETE",
+                              });
+                              const json = await res.json();
+                              if (json.success) {
+                                setPacks((prev) => prev.filter((p) => p.id !== pack.id));
+                                showToast("success", `Pack "${pack.nombre}" eliminado`);
+                              }
+                            } catch {
+                              showToast("error", "Error al eliminar pack");
+                            }
+                          }}
+                          className="shrink-0 rounded-lg p-1.5 text-zinc-400 opacity-0 transition-all hover:bg-zinc-100 hover:text-rose-600 group-hover:opacity-100 dark:hover:bg-zinc-800 dark:hover:text-rose-400"
+                          aria-label={`Eliminar pack ${pack.nombre}`}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
+
+                      {pack.productos.length > 0 && (
+                        <div className="border-t border-zinc-200/70 px-4 pb-3 pt-2 dark:border-zinc-800/60 sm:px-5">
+                          <div className="space-y-1">
+                            {pack.productos.map((prod) => (
+                              <div
+                                key={prod.id}
+                                className={`flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 ${
+                                  prod.comprado
+                                    ? "bg-zinc-50 dark:bg-zinc-800/40"
+                                    : "bg-white dark:bg-zinc-900/60"
+                                }`}
+                              >
+                                <div
+                                  className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-xs ${
+                                    prod.comprado
+                                      ? "bg-emerald-100 text-emerald-600 dark:bg-emerald-950/60 dark:text-emerald-400"
+                                      : "bg-zinc-100 text-zinc-400 dark:bg-zinc-800"
+                                  }`}
+                                >
+                                  {prod.comprado ? (
+                                    <Check className="h-3 w-3" />
+                                  ) : (
+                                    <ShoppingBag className="h-3 w-3" />
+                                  )}
+                                </div>
+                                <span
+                                  className={`min-w-0 flex-1 truncate text-xs ${
+                                    prod.comprado
+                                      ? "text-zinc-500 line-through dark:text-zinc-500"
+                                      : "text-zinc-800 dark:text-zinc-200"
+                                  }`}
+                                >
+                                  {prod.nombre}
+                                </span>
+                                <span className="shrink-0 text-[11px] font-medium tabular-nums text-zinc-500 dark:text-zinc-400">
+                                  ${Number(prod.precio).toLocaleString("es-CL")}
+                                </span>
+                                <span className="hidden truncate text-[10px] text-zinc-400 sm:inline dark:text-zinc-500">
+                                  {prod.lugar_nombre}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </section>
+
         {/* COMPRAS */}
         <section
           className="overflow-hidden rounded-2xl border border-zinc-200/70 bg-white shadow-sm dark:border-zinc-800/60 dark:bg-zinc-950"
@@ -1206,6 +1405,87 @@ export default function PerfilPage() {
         onDescripcionChange={setDescripcion}
         onValorChange={setValor}
       />
+
+      <Modal open={showNewPackForm} onClose={() => { setShowNewPackForm(false); setNewPackName(""); }}>
+        <div className="flex flex-col gap-4">
+          <div className="flex items-start justify-between">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-violet-100 text-violet-700 dark:bg-violet-950/60 dark:text-violet-300">
+                <List className="h-5 w-5" />
+              </div>
+              <div>
+                <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">
+                  Nuevo pack
+                </h2>
+                <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                  Crea una lista de productos para comprar.
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => { setShowNewPackForm(false); setNewPackName(""); }}
+              className="rounded-lg p-1.5 text-zinc-400 transition-colors hover:bg-zinc-100 hover:text-zinc-700 dark:hover:bg-zinc-800 dark:hover:text-zinc-200"
+              aria-label="Cerrar"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+
+          <form
+            onSubmit={async (e) => {
+              e.preventDefault();
+              if (!newPackName.trim()) return;
+              setCreatingPack(true);
+              try {
+                const res = await fetch("/api/packs", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ nombre: newPackName.trim() }),
+                });
+                const json = await res.json();
+                if (!json.success) {
+                  showToast("error", json.error);
+                  return;
+                }
+                setPacks((prev) => [...prev, json.data]);
+                setNewPackName("");
+                setShowNewPackForm(false);
+                showToast("success", "Pack creado");
+              } catch {
+                showToast("error", "Error al crear pack");
+              } finally {
+                setCreatingPack(false);
+              }
+            }}
+            className="flex flex-col gap-4"
+          >
+            <Input
+              label="Nombre del pack"
+              placeholder="Ej: Compra mensual"
+              icon={FileText}
+              name="nombre"
+              value={newPackName}
+              onChange={(e) => setNewPackName(e.target.value)}
+              autoFocus
+            />
+            <div className="flex gap-2 pt-1">
+              <Button
+                type="button"
+                variant="secondary"
+                className="flex-1"
+                onClick={() => { setShowNewPackForm(false); setNewPackName(""); }}
+              >
+                Cancelar
+              </Button>
+              <Button type="submit" loading={creatingPack} className="flex-1">
+                <Plus className="mr-1.5 h-4 w-4" />
+                Crear
+              </Button>
+            </div>
+          </form>
+        </div>
+      </Modal>
 
       {toast && (
         <div

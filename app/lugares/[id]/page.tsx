@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/contexts/auth-context";
 import { Card } from "@/components/ui/card";
@@ -23,6 +23,10 @@ import {
   Search,
   LineChart,
   Pencil,
+  ListPlus,
+  List,
+  Check,
+  Plus,
 } from "lucide-react";
 
 function CopyIcon(props: React.SVGProps<SVGSVGElement>) {
@@ -137,7 +141,7 @@ function CoordField({
     </div>
   );
 }
-import type { Producto, Lugar, Presupuesto, CompraConProducto } from "@/types";
+import type { Producto, Lugar, Presupuesto, CompraConProducto, UserPack } from "@/types";
 
 export default function LugarDetailPage() {
   const { user } = useAuth();
@@ -162,7 +166,16 @@ export default function LugarDetailPage() {
   const [priceEditProducto, setPriceEditProducto] = useState<Producto | null>(null);
   const [showLocation, setShowLocation] = useState(false);
   const [copiedField, setCopiedField] = useState<"lat" | "lng" | null>(null);
+  const [packProducto, setPackProducto] = useState<Producto | null>(null);
+  const [userPacks, setUserPacks] = useState<UserPack[]>([]);
+  const [addingToPack, setAddingToPack] = useState<Set<number>>(new Set());
+  const [toast, setToast] = useState<{ type: "success" | "error"; msg: string } | null>(null);
   const copyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const showToast = useCallback((type: "success" | "error", msg: string) => {
+    setToast({ type, msg });
+    window.setTimeout(() => setToast(null), 2400);
+  }, []);
 
   const highlightedProductId = Number(searchParams.get("producto")) || null;
   const productRefs = useRef<Record<number, HTMLDivElement | null>>({});
@@ -272,6 +285,48 @@ export default function LugarDetailPage() {
     setErrorMsg("");
     setShowLocation(false);
     setCopiedField(null);
+  }
+
+  async function abrirPackModal(producto: Producto) {
+    if (!user) {
+      router.push("/login");
+      return;
+    }
+    setPackProducto(producto);
+    try {
+      const res = await fetch("/api/packs/mine");
+      const json = await res.json();
+      if (json.success) setUserPacks(json.data);
+    } catch {
+      setUserPacks([]);
+    }
+  }
+
+  async function agregarAPack(packId: number) {
+    if (!packProducto) return;
+    setAddingToPack((prev) => new Set(prev).add(packId));
+    try {
+      const res = await fetch(`/api/packs/${packId}/productos`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ producto_id: packProducto.id }),
+      });
+      const json = await res.json();
+      if (json.success) {
+        showToast("success", `"${packProducto.nombre}" agregado al pack`);
+        setPackProducto(null);
+      } else {
+        showToast("error", json.error);
+      }
+    } catch {
+      showToast("error", "Error al agregar al pack");
+    } finally {
+      setAddingToPack((prev) => {
+        const next = new Set(prev);
+        next.delete(packId);
+        return next;
+      });
+    }
   }
 
   async function confirmarCompra() {
@@ -528,14 +583,25 @@ export default function LugarDetailPage() {
                           </p>
                         </div>
                       </div>
-                      <Button
-                        onClick={() => abrirModal(producto)}
-                        size="sm"
-                        className="w-full shrink-0 sm:w-auto"
-                      >
-                        <ShoppingCart className="mr-1.5 h-4 w-4" />
-                        Comprar
-                      </Button>
+                      <div className="flex gap-1.5">
+                        <Button
+                          onClick={() => abrirPackModal(producto)}
+                          size="sm"
+                          variant="secondary"
+                          className="shrink-0"
+                          aria-label={`Agregar ${producto.nombre} a un pack`}
+                        >
+                          <ListPlus className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          onClick={() => abrirModal(producto)}
+                          size="sm"
+                          className="shrink-0"
+                        >
+                          <ShoppingCart className="mr-1.5 h-4 w-4" />
+                          Comprar
+                        </Button>
+                      </div>
                     </div>
                   );
                 })}
@@ -837,6 +903,101 @@ export default function LugarDetailPage() {
           );
         }}
       />
+
+      <Modal open={!!packProducto} onClose={() => setPackProducto(null)}>
+        {packProducto && (
+          <div className="flex flex-col gap-4">
+            <div className="flex items-start justify-between">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-violet-100 text-violet-700 dark:bg-violet-950/60 dark:text-violet-300">
+                  <ListPlus className="h-5 w-5" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">
+                    Agregar a pack
+                  </h3>
+                  <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                    {packProducto.nombre} — ${Number(packProducto.precio).toLocaleString("es-CL")}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setPackProducto(null)}
+                className="rounded-lg p-1.5 text-zinc-400 transition-colors hover:bg-zinc-100 hover:text-zinc-700 dark:hover:bg-zinc-800 dark:hover:text-zinc-200"
+                aria-label="Cerrar"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            {userPacks.length === 0 ? (
+              <div className="flex flex-col items-center gap-2 py-6 text-center">
+                <ListPlus className="h-8 w-8 text-zinc-300 dark:text-zinc-600" />
+                <p className="text-sm text-zinc-500 dark:text-zinc-400">
+                  No tienes packs. Crea uno desde tu perfil.
+                </p>
+                <Button size="sm" onClick={() => router.push("/perfil#packs")}>
+                  Ir a mis packs
+                </Button>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {userPacks.map((pack) => (
+                  <button
+                    key={pack.id}
+                    type="button"
+                    disabled={addingToPack.has(pack.id)}
+                    onClick={() => agregarAPack(pack.id)}
+                    className="flex w-full items-center gap-3 rounded-lg border border-zinc-200/70 px-4 py-3 text-left transition-all hover:border-violet-300 hover:bg-violet-50 disabled:opacity-50 dark:border-zinc-800/60 dark:hover:border-violet-700 dark:hover:bg-violet-950/30"
+                  >
+                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-violet-100 text-violet-700 dark:bg-violet-950/60 dark:text-violet-300">
+                      <List className="h-4 w-4" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-medium text-zinc-900 dark:text-zinc-100">
+                        {pack.nombre}
+                      </p>
+                      <p className="text-[10px] text-zinc-500 dark:text-zinc-400">
+                        {pack.pendientes} pendientes · {pack.total_productos} productos
+                      </p>
+                    </div>
+                    {addingToPack.has(pack.id) ? (
+                      <div className="h-4 w-4 animate-spin rounded-full border-2 border-zinc-300 border-t-violet-500" />
+                    ) : (
+                      <Plus className="h-4 w-4 shrink-0 text-zinc-400" />
+                    )}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+      </Modal>
+
+      {toast && (
+        <div
+          role="status"
+          aria-live="polite"
+          className="pointer-events-none fixed inset-x-0 bottom-4 z-50 flex justify-center px-4 sm:bottom-6"
+        >
+          <div
+            className={`pointer-events-auto flex max-w-md items-center gap-2.5 rounded-full border px-4 py-2.5 text-sm font-medium shadow-lg backdrop-blur ${
+              toast.type === "success"
+                ? "border-emerald-200 bg-white/95 text-emerald-800 dark:border-emerald-800/60 dark:bg-zinc-900/95 dark:text-emerald-200"
+                : "border-rose-200 bg-white/95 text-rose-800 dark:border-rose-800/60 dark:bg-zinc-900/95 dark:text-rose-200"
+            }`}
+            style={{ animation: "fadeInUp 0.25s ease both" }}
+          >
+            {toast.type === "success" ? (
+              <Check className="h-4 w-4" />
+            ) : (
+              <AlertCircle className="h-4 w-4" />
+            )}
+            {toast.msg}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

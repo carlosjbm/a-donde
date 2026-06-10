@@ -46,6 +46,11 @@ export interface Producto {
   id_categ: number;
   activo: boolean;
   fech_act_precio: string | null;
+  descripcion?: string | null;
+  notas?: string | null;
+  disponible?: boolean;
+  stock?: number | null;
+  categoria?: string | null;
 }
 
 export type ProductoPrecioFuente = "manual" | "compra" | "importacion" | "sistema";
@@ -120,4 +125,28 @@ export interface SugerenciaPack {
   total: number;
   precio_total: number;
   productos: SugerenciaProducto[];
+}
+
+export interface PackProducto {
+  id: number;
+  producto_id: number;
+  nombre: string;
+  precio: number;
+  imagen: string | null;
+  lugar_id: number;
+  lugar_nombre: string;
+  comprado: boolean;
+  compra_id: number | null;
+}
+
+export interface UserPack {
+  id: number;
+  nombre: string;
+  usuario_id: number;
+  created_at: string;
+  total_productos: number;
+  comprados: number;
+  pendientes: number;
+  precio_total: number;
+  productos: PackProducto[];
 }

@@ -308,3 +308,130 @@ export async function updatePrecio(
     conn.release();
   }
 }
+
+export async function create(
+  data: {
+    nombre: string;
+    precio: number;
+    notas?: string | null;
+    imagen?: string | null;
+    escencial?: boolean;
+    id_categ?: number | null;
+    idUsuario: number;
+    idLugar: number;
+    fuente: string;
+  }
+): Promise<Producto> {
+  const {
+    nombre,
+    precio,
+    notas,
+    imagen,
+    escencial,
+    id_categ,
+    idUsuario,
+    idLugar,
+    fuente,
+  } = data;
+
+  const [result] = await pool.query(
+    `INSERT INTO productos 
+     (nombre, precio, notas, imagen, escencial, id_categ, id_usuario, id_lugar, fuente, fech_act_precio)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
+    [
+      nombre,
+      precio,
+      notas,
+      imagen,
+      escencial,
+      id_categ,
+      idUsuario,
+      idLugar,
+      fuente,
+    ]
+  );
+
+  const id = (result as { insertId: number }).insertId;
+  return (await findById(id, true))!;
+}
+
+export async function update(
+  id: number,
+  data: Partial<Omit<Producto, "id" | "created_at" | "updated_at">>
+): Promise<Producto | null> {
+  const fields: string[] = [];
+  const values: unknown[] = [];
+
+  if (data.nombre !== undefined) {
+    fields.push("nombre = ?");
+    values.push(data.nombre);
+  }
+  if (data.precio !== undefined) {
+    fields.push("precio = ?");
+    values.push(data.precio);
+  }
+  if (data.notas !== undefined) {
+    fields.push("notas = ?");
+    values.push(data.notas);
+  }
+  if (data.imagen !== undefined) {
+    fields.push("imagen = ?");
+    values.push(data.imagen);
+  }
+  if (data.escencial !== undefined) {
+    fields.push("escencial = ?");
+    values.push(data.escencial);
+  }
+  if (data.id_categ !== undefined) {
+    fields.push("id_categ = ?");
+    values.push(data.id_categ);
+  }
+  if (data.activo !== undefined) {
+    fields.push("activo = ?");
+    values.push(data.activo);
+  }
+
+  if (fields.length === 0) return findById(id, true);
+
+  values.push(id);
+  await pool.query(
+    `UPDATE productos SET ${fields.join(", ")}, fech_act_precio = NOW() WHERE id = ?`,
+    values
+  );
+  return findById(id, true);
+}
+
+export async function deleteProducto(id: number, userId: number): Promise<boolean> {
+  const conn = await pool.getConnection();
+  try {
+    await conn.beginTransaction();
+
+    const [productoRows] = await conn.query<RowDataPacket[]>(
+      "SELECT id, id_lugar FROM productos WHERE id = ?",
+      [id]
+    );
+    const producto = (productoRows as Array<{ id: number; id_lugar: number }>)[0];
+    if (!producto) {
+      await conn.rollback();
+      throw new Error("Producto no encontrado");
+    }
+
+    const [deletedRows] = await conn.query<ResultSetHeader>(
+      "DELETE FROM productos WHERE id = ?",
+      [id]
+    );
+
+    if (deletedRows.affectedRows === 0) {
+      await conn.rollback();
+      throw new Error("Producto no encontrado");
+    }
+
+    await conn.commit();
+    return true;
+  } catch (err) {
+    await conn.rollback();
+    throw err;
+  } finally {
+    conn.release();
+  }
+}

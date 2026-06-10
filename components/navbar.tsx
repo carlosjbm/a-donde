@@ -14,24 +14,25 @@ import {
   Wallet,
   ShoppingCart,
   Home,
+  Bell,
 } from "lucide-react";
 
 export function Navbar() {
   const { user, loading, logout } = useAuth();
   const [presupuestoTotal, setPresupuestoTotal] = useState<number | null>(null);
   const [gastado, setGastado] = useState(0);
+  const [pendingCount, setPendingCount] = useState(0);
 
   useEffect(() => {
     if (!user) {
-      // setPresupuestoTotal(null);
-      // setGastado(0);
       return;
     }
 
     Promise.all([
       fetch("/api/presupuestos/mine").then((r) => r.json()),
       fetch("/api/compras/mine").then((r) => r.json()),
-    ]).then(([presJson, compJson]) => {
+      fetch("/api/packs/pending-count").then((r) => r.json()),
+    ]).then(([presJson, compJson, packJson]) => {
       if (presJson.success) {
         const total = presJson.data.reduce(
           (s: number, p: { valor: number }) => s + Number(p.valor),
@@ -46,6 +47,9 @@ export function Navbar() {
           0,
         );
         setGastado(totalGastado);
+      }
+      if (packJson.success) {
+        setPendingCount(packJson.data.count);
       }
     });
   }, [user]);
@@ -80,6 +84,17 @@ export function Navbar() {
                   >
                     <Wallet className="h-3.5 w-3.5" />$
                     {disponible.toLocaleString("es-CL")}
+                  </Link>
+                  <Link
+                    href={"/perfil#packs"}
+                    className="relative rounded-lg p-2 text-zinc-600 transition-colors hover:bg-zinc-100 hover:text-zinc-900 focus:outline-none focus:ring-2 focus:ring-zinc-400 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-100 dark:focus:ring-zinc-500"
+                  >
+                    <Bell className="h-5 w-5" />
+                    {pendingCount > 0 && (
+                      <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-rose-500 px-1 text-[9px] font-bold leading-none text-white">
+                        {pendingCount > 99 ? "99+" : pendingCount}
+                      </span>
+                    )}
                   </Link>
                   <Link
                     href={"/lugares"}
