@@ -74,4 +74,7 @@ declare module "lucide-react" {
   export const Trash2: Icon;
   export const Bell: Icon;
   export const ListPlus: Icon;
+  export const Users: Icon;
+  export const UserCog: Icon;
+  export const ToggleLeft: Icon;
 }

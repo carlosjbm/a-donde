@@ -19,8 +19,12 @@ import {
   AlertCircle,
   Check,
   Plus,
+  Store,
+  MapPin,
+  CreditCard,
+  ToggleLeft,
 } from "lucide-react";
-import type { Usuario } from "@/types";
+import type { Usuario, Lugar } from "@/types";
 
 export default function AdminPage() {
   const { user, loading } = useAuth();
@@ -34,12 +38,50 @@ export default function AdminPage() {
   const [showCreate, setShowCreate] = useState(false);
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState("");
-  const [toast, setToast] = useState<{ type: "success" | "error"; msg: string } | null>(null);
+  const [toast, setToast] = useState<{
+    type: "success" | "error";
+    msg: string;
+  } | null>(null);
   const [toggling, setToggling] = useState<number | null>(null);
   const [editTarget, setEditTarget] = useState<Usuario | null>(null);
-  const [editForm, setEditForm] = useState({ nombre: "", email: "", password: "" });
+  const [editForm, setEditForm] = useState({
+    nombre: "",
+    email: "",
+    password: "",
+  });
   const [editing, setEditing] = useState(false);
   const [editError, setEditError] = useState("");
+
+  const [tab, setTab] = useState<"usuarios" | "lugares">("usuarios");
+  const [lugares, setLugares] = useState<Lugar[]>([]);
+  const [loadingLugares, setLoadingLugares] = useState(true);
+  const [lugarSearch, setLugarSearch] = useState("");
+  const [editLugar, setEditLugar] = useState<Lugar | null>(null);
+  const [editLugarForm, setEditLugarForm] = useState({
+    nombre: "",
+    descripcion: "",
+    direccion: "",
+    latitud: "",
+    longitud: "",
+    transferencia: false,
+  });
+  const [editingLugar, setEditingLugar] = useState(false);
+  const [editLugarError, setEditLugarError] = useState("");
+  const [createLugar, setCreateLugar] = useState(false);
+  const [createLugarForm, setCreateLugarForm] = useState({
+    nombre: "",
+    descripcion: "",
+    direccion: "",
+    latitud: "",
+    longitud: "",
+    transferencia: false,
+  });
+  const [creatingLugar, setCreatingLugar] = useState(false);
+  const [createLugarError, setCreateLugarError] = useState("");
+  const [deleteLugarTarget, setDeleteLugarTarget] = useState<Lugar | null>(
+    null,
+  );
+  const [deletingLugar, setDeletingLugar] = useState(false);
 
   const showToast = useCallback((type: "success" | "error", msg: string) => {
     setToast({ type, msg });
@@ -47,7 +89,10 @@ export default function AdminPage() {
   }, []);
 
   const normalize = (s: string) =>
-    s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+    s
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase();
 
   useEffect(() => {
     if (!loading) {
@@ -74,7 +119,29 @@ export default function AdminPage() {
         if (!cancelled) setLoadingData(false);
       }
     })();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
+  }, [user, showToast]);
+
+  useEffect(() => {
+    if (user?.rol_id !== 1) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch("/api/lugares");
+        if (!res.ok) throw new Error("Error al cargar lugares");
+        const json = await res.json();
+        if (!cancelled && json.success) setLugares(json.data);
+      } catch {
+        if (!cancelled) showToast("error", "Error al cargar lugares");
+      } finally {
+        if (!cancelled) setLoadingLugares(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, [user, showToast]);
 
   async function toggleRol(u: Usuario) {
@@ -92,7 +159,9 @@ export default function AdminPage() {
       const json = await res.json();
       if (json.success) {
         setUsuarios((prev) =>
-          prev.map((p) => (p.id === u.id ? { ...p, rol_id: u.rol_id === 1 ? 0 : 1 } : p))
+          prev.map((p) =>
+            p.id === u.id ? { ...p, rol_id: u.rol_id === 1 ? 0 : 1 } : p,
+          ),
         );
         showToast("success", `Rol actualizado: ${u.nombre}`);
       } else {
@@ -183,7 +252,7 @@ export default function AdminPage() {
       const json = await res.json();
       if (json.success) {
         setUsuarios((prev) =>
-          prev.map((p) => (p.id === editTarget.id ? json.data : p))
+          prev.map((p) => (p.id === editTarget.id ? json.data : p)),
         );
         showToast("success", `Usuario actualizado: ${json.data.nombre}`);
         setEditTarget(null);
@@ -197,10 +266,148 @@ export default function AdminPage() {
     }
   }
 
+  const filteredLugares = lugarSearch.trim()
+    ? lugares.filter(
+        (l) =>
+          normalize(l.nombre).includes(normalize(lugarSearch.trim())) ||
+          normalize(l.direccion || "").includes(normalize(lugarSearch.trim())),
+      )
+    : lugares;
+
+  function abrirEditarLugar(l: Lugar) {
+    setEditLugar(l);
+    setEditLugarForm({
+      nombre: l.nombre,
+      descripcion: l.descripcion || "",
+      direccion: l.direccion,
+      latitud: l.latitud?.toString() || "",
+      longitud: l.longitud?.toString() || "",
+      transferencia: l.transferencia,
+    });
+    setEditLugarError("");
+  }
+
+  async function handleEditLugar(e: React.FormEvent) {
+    e.preventDefault();
+    if (!editLugar) return;
+    setEditLugarError("");
+    if (!editLugarForm.nombre.trim() || !editLugarForm.direccion.trim()) {
+      setEditLugarError("Nombre y dirección son obligatorios");
+      return;
+    }
+    setEditingLugar(true);
+    try {
+      const body: Record<string, unknown> = {
+        nombre: editLugarForm.nombre.trim(),
+        descripcion: editLugarForm.descripcion.trim(),
+        direccion: editLugarForm.direccion.trim(),
+        transferencia: editLugarForm.transferencia,
+      };
+      const lat = editLugarForm.latitud.trim();
+      const lng = editLugarForm.longitud.trim();
+      if (lat) body.latitud = Number(lat);
+      if (lng) body.longitud = Number(lng);
+      const res = await fetch(`/api/lugares/${editLugar.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      const json = await res.json();
+      if (json.success) {
+        setLugares((prev) =>
+          prev.map((p) => (p.id === editLugar.id ? json.data : p)),
+        );
+        showToast("success", `Lugar actualizado: ${json.data.nombre}`);
+        setEditLugar(null);
+      } else {
+        setEditLugarError(json.error);
+      }
+    } catch {
+      setEditLugarError("Error al actualizar lugar");
+    } finally {
+      setEditingLugar(false);
+    }
+  }
+
+  function abrirCrearLugar() {
+    setCreateLugarForm({
+      nombre: "",
+      descripcion: "",
+      direccion: "",
+      latitud: "",
+      longitud: "",
+      transferencia: false,
+    });
+    setCreateLugarError("");
+    setCreateLugar(true);
+  }
+
+  async function handleCreateLugar(e: React.FormEvent) {
+    e.preventDefault();
+    setCreateLugarError("");
+    if (!createLugarForm.nombre.trim() || !createLugarForm.direccion.trim()) {
+      setCreateLugarError("Nombre y dirección son obligatorios");
+      return;
+    }
+    setCreatingLugar(true);
+    try {
+      const body: Record<string, unknown> = {
+        nombre: createLugarForm.nombre.trim(),
+        descripcion: createLugarForm.descripcion.trim(),
+        direccion: createLugarForm.direccion.trim(),
+        transferencia: createLugarForm.transferencia,
+      };
+      const lat = createLugarForm.latitud.trim();
+      const lng = createLugarForm.longitud.trim();
+      if (lat) body.latitud = Number(lat);
+      if (lng) body.longitud = Number(lng);
+      const res = await fetch("/api/lugares", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      const json = await res.json();
+      if (json.success) {
+        setLugares((prev) => [...prev, json.data]);
+        showToast("success", `Lugar creado: ${json.data.nombre}`);
+        setCreateLugar(false);
+      } else {
+        setCreateLugarError(json.error);
+      }
+    } catch {
+      setCreateLugarError("Error al crear lugar");
+    } finally {
+      setCreatingLugar(false);
+    }
+  }
+
+  async function confirmDeleteLugar() {
+    if (!deleteLugarTarget) return;
+    setDeletingLugar(true);
+    try {
+      const res = await fetch(`/api/lugares/${deleteLugarTarget.id}`, {
+        method: "DELETE",
+      });
+      const json = await res.json();
+      if (json.success) {
+        setLugares((prev) => prev.filter((p) => p.id !== deleteLugarTarget.id));
+        showToast("success", `Lugar eliminado: ${deleteLugarTarget.nombre}`);
+        setDeleteLugarTarget(null);
+      } else {
+        showToast("error", json.error);
+      }
+    } catch {
+      showToast("error", "Error al eliminar lugar");
+    } finally {
+      setDeletingLugar(false);
+    }
+  }
+
   const filtered = search.trim()
-    ? usuarios.filter((u) =>
-        normalize(u.nombre).includes(normalize(search.trim())) ||
-        normalize(u.email).includes(normalize(search.trim()))
+    ? usuarios.filter(
+        (u) =>
+          normalize(u.nombre).includes(normalize(search.trim())) ||
+          normalize(u.email).includes(normalize(search.trim())),
       )
     : usuarios;
 
@@ -222,10 +429,35 @@ export default function AdminPage() {
           <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100">
             Panel de administración
           </h1>
-          <p className="text-sm text-zinc-500">
-            Bienvenido, {user.nombre} &middot; {usuarios.length} usuario{usuarios.length !== 1 ? "s" : ""} registrado{usuarios.length !== 1 ? "s" : ""}
-          </p>
+          <p className="text-sm text-zinc-500">Bienvenido, {user.nombre}</p>
         </div>
+      </div>
+
+      <div className="flex gap-2 rounded-xl border border-zinc-200 bg-zinc-50 p-1 dark:border-zinc-700 dark:bg-zinc-800/50">
+        <button
+          type="button"
+          onClick={() => setTab("usuarios")}
+          className={`flex flex-1 items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-all ${
+            tab === "usuarios"
+              ? "bg-white text-zinc-900 shadow-sm dark:bg-zinc-900 dark:text-zinc-100"
+              : "text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-200"
+          }`}
+        >
+          <Users className="h-4 w-4" />
+          Usuarios
+        </button>
+        <button
+          type="button"
+          onClick={() => setTab("lugares")}
+          className={`flex flex-1 items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-all ${
+            tab === "lugares"
+              ? "bg-white text-zinc-900 shadow-sm dark:bg-zinc-900 dark:text-zinc-100"
+              : "text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-200"
+          }`}
+        >
+          <Store className="h-4 w-4" />
+          Lugares
+        </button>
       </div>
 
       <Card>
@@ -234,15 +466,23 @@ export default function AdminPage() {
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
             <input
               type="text"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Buscar usuarios..."
+              value={tab === "usuarios" ? search : lugarSearch}
+              onChange={(e) =>
+                tab === "usuarios"
+                  ? setSearch(e.target.value)
+                  : setLugarSearch(e.target.value)
+              }
+              placeholder={
+                tab === "usuarios" ? "Buscar usuarios..." : "Buscar lugares..."
+              }
               className="w-full rounded-lg border border-zinc-300 bg-white py-2 pl-9 pr-9 text-sm text-zinc-900 placeholder-zinc-400 focus:border-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-500 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100 dark:placeholder-zinc-500"
             />
-            {search && (
+            {(tab === "usuarios" ? search : lugarSearch) && (
               <button
                 type="button"
-                onClick={() => setSearch("")}
+                onClick={() =>
+                  tab === "usuarios" ? setSearch("") : setLugarSearch("")
+                }
                 aria-label="Limpiar búsqueda"
                 className="absolute right-2 top-1/2 flex h-6 w-6 -translate-y-1/2 items-center justify-center rounded-md text-zinc-400 transition-colors hover:bg-zinc-100 hover:text-zinc-700 dark:hover:bg-zinc-700 dark:hover:text-zinc-200"
               >
@@ -250,72 +490,166 @@ export default function AdminPage() {
               </button>
             )}
           </div>
-          <Button onClick={() => setShowCreate(true)}>
+          <Button
+            onClick={
+              tab === "usuarios" ? () => setShowCreate(true) : abrirCrearLugar
+            }
+          >
             <Plus className="mr-1.5 h-4 w-4" />
-            Nuevo usuario
+            {tab === "usuarios" ? "Nuevo usuario" : "Nuevo lugar"}
           </Button>
         </div>
 
-        {loadingData ? (
-          <p className="py-8 text-center text-sm text-zinc-500">Cargando usuarios...</p>
-        ) : filtered.length === 0 ? (
+        {tab === "usuarios" ? (
+          loadingData ? (
+            <p className="py-8 text-center text-sm text-zinc-500">
+              Cargando usuarios...
+            </p>
+          ) : filtered.length === 0 ? (
+            <div className="flex flex-col items-center gap-2 py-8 text-center">
+              <Users className="h-10 w-10 text-zinc-300 dark:text-zinc-600" />
+              <p className="text-sm text-zinc-500">
+                {search
+                  ? "No se encontraron usuarios"
+                  : "No hay usuarios registrados"}
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {filtered.map((u) => (
+                <div
+                  key={u.id}
+                  className="flex flex-col gap-2 rounded-lg border border-zinc-200/70 px-4 py-3 transition-all hover:border-zinc-300 sm:flex-row sm:items-center sm:gap-3 dark:border-zinc-800/60 dark:hover:border-zinc-700"
+                >
+                  <div className="flex min-w-0 flex-1 items-center gap-3">
+                    <div
+                      className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${
+                        u.rol_id === 1
+                          ? "bg-amber-100 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300"
+                          : "bg-zinc-100 text-zinc-500 dark:bg-zinc-800"
+                      }`}
+                    >
+                      <UserCog className="h-4 w-4" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2">
+                        <p className="truncate text-sm font-medium text-zinc-900 dark:text-zinc-100">
+                          {u.nombre}
+                        </p>
+                        <span
+                          className={`hidden shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide sm:inline-flex ${
+                            u.rol_id === 1
+                              ? "bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300"
+                              : "bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400"
+                          }`}
+                        >
+                          <Shield className="h-3 w-3" />
+                          {u.rol_id === 1 ? "Admin" : "Usuario"}
+                        </span>
+                      </div>
+                      <div className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-zinc-400">
+                        <span
+                          className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide sm:hidden ${
+                            u.rol_id === 1
+                              ? "bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300"
+                              : "bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400"
+                          }`}
+                        >
+                          <Shield className="h-3 w-3" />
+                          {u.rol_id === 1 ? "Admin" : "Usuario"}
+                        </span>
+                        <span className="inline-flex items-center gap-1">
+                          <Mail className="h-3 w-3" />
+                          {u.email}
+                        </span>
+                        <span className="inline-flex items-center gap-1">
+                          <Calendar className="h-3 w-3" />
+                          {new Date(u.created_at).toLocaleDateString("es-CL")}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex shrink-0 items-center justify-end gap-1.5 sm:self-center">
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      loading={toggling === u.id}
+                      onClick={() => toggleRol(u)}
+                      disabled={u.id === user.id}
+                      title={
+                        u.id === user.id
+                          ? "No puedes cambiarte tu propio rol"
+                          : `Cambiar a ${u.rol_id === 1 ? "usuario" : "admin"}`
+                      }
+                    >
+                      <UserCog className="h-3.5 w-3.5" />
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      onClick={() => abrirEditar(u)}
+                      title="Editar usuario"
+                    >
+                      <Pencil className="h-3.5 w-3.5" />
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="danger"
+                      onClick={() => setDeleteTarget(u)}
+                      disabled={u.id === user.id}
+                      title={
+                        u.id === user.id
+                          ? "No puedes eliminarte a ti mismo"
+                          : "Eliminar usuario"
+                      }
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )
+        ) : loadingLugares ? (
+          <p className="py-8 text-center text-sm text-zinc-500">
+            Cargando lugares...
+          </p>
+        ) : filteredLugares.length === 0 ? (
           <div className="flex flex-col items-center gap-2 py-8 text-center">
-            <Users className="h-10 w-10 text-zinc-300 dark:text-zinc-600" />
+            <Store className="h-10 w-10 text-zinc-300 dark:text-zinc-600" />
             <p className="text-sm text-zinc-500">
-              {search ? "No se encontraron usuarios" : "No hay usuarios registrados"}
+              {lugarSearch
+                ? "No se encontraron lugares"
+                : "No hay lugares registrados"}
             </p>
           </div>
         ) : (
           <div className="space-y-2">
-            {filtered.map((u) => (
+            {filteredLugares.map((l) => (
               <div
-                key={u.id}
+                key={l.id}
                 className="flex flex-col gap-2 rounded-lg border border-zinc-200/70 px-4 py-3 transition-all hover:border-zinc-300 sm:flex-row sm:items-center sm:gap-3 dark:border-zinc-800/60 dark:hover:border-zinc-700"
               >
                 <div className="flex min-w-0 flex-1 items-center gap-3">
-                  <div
-                    className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${
-                      u.rol_id === 1
-                        ? "bg-amber-100 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300"
-                        : "bg-zinc-100 text-zinc-500 dark:bg-zinc-800"
-                    }`}
-                  >
-                    <UserCog className="h-4 w-4" />
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-sky-100 text-sky-700 dark:bg-sky-950/60 dark:text-sky-300">
+                    <Store className="h-4 w-4" />
                   </div>
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
                       <p className="truncate text-sm font-medium text-zinc-900 dark:text-zinc-100">
-                        {u.nombre}
+                        {l.nombre}
                       </p>
-                      <span
-                        className={`hidden shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide sm:inline-flex ${
-                          u.rol_id === 1
-                            ? "bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300"
-                            : "bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400"
-                        }`}
-                      >
-                        <Shield className="h-3 w-3" />
-                        {u.rol_id === 1 ? "Admin" : "Usuario"}
-                      </span>
+                      {l.transferencia && (
+                        <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-sky-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-sky-700 dark:bg-sky-950/50 dark:text-sky-300">
+                          <CreditCard className="h-3 w-3" />
+                          Pago elec.
+                        </span>
+                      )}
                     </div>
                     <div className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-zinc-400">
-                      <span
-                        className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide sm:hidden ${
-                          u.rol_id === 1
-                            ? "bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300"
-                            : "bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400"
-                        }`}
-                      >
-                        <Shield className="h-3 w-3" />
-                        {u.rol_id === 1 ? "Admin" : "Usuario"}
-                      </span>
                       <span className="inline-flex items-center gap-1">
-                        <Mail className="h-3 w-3" />
-                        {u.email}
-                      </span>
-                      <span className="inline-flex items-center gap-1">
-                        <Calendar className="h-3 w-3" />
-                        {new Date(u.created_at).toLocaleDateString("es-CL")}
+                        <MapPin className="h-3 w-3" />
+                        {l.direccion}
                       </span>
                     </div>
                   </div>
@@ -324,27 +658,16 @@ export default function AdminPage() {
                   <Button
                     size="sm"
                     variant="secondary"
-                    loading={toggling === u.id}
-                    onClick={() => toggleRol(u)}
-                    disabled={u.id === user.id}
-                    title={u.id === user.id ? "No puedes cambiarte tu propio rol" : `Cambiar a ${u.rol_id === 1 ? "usuario" : "admin"}`}
-                  >
-                    <UserCog className="h-3.5 w-3.5" />
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="secondary"
-                    onClick={() => abrirEditar(u)}
-                    title="Editar usuario"
+                    onClick={() => abrirEditarLugar(l)}
+                    title="Editar lugar"
                   >
                     <Pencil className="h-3.5 w-3.5" />
                   </Button>
                   <Button
                     size="sm"
                     variant="danger"
-                    onClick={() => setDeleteTarget(u)}
-                    disabled={u.id === user.id}
-                    title={u.id === user.id ? "No puedes eliminarte a ti mismo" : "Eliminar usuario"}
+                    onClick={() => setDeleteLugarTarget(l)}
+                    title="Eliminar lugar"
                   >
                     <Trash2 className="h-3.5 w-3.5" />
                   </Button>
@@ -355,7 +678,10 @@ export default function AdminPage() {
         )}
       </Card>
 
-      <Modal open={!!deleteTarget} onClose={() => !deleting && setDeleteTarget(null)}>
+      <Modal
+        open={!!deleteTarget}
+        onClose={() => !deleting && setDeleteTarget(null)}
+      >
         {deleteTarget && (
           <div className="flex flex-col gap-4">
             <div className="flex items-center gap-3">
@@ -399,7 +725,10 @@ export default function AdminPage() {
         )}
       </Modal>
 
-      <Modal open={showCreate} onClose={() => !creating && setShowCreate(false)}>
+      <Modal
+        open={showCreate}
+        onClose={() => !creating && setShowCreate(false)}
+      >
         <form onSubmit={handleCreate} className="flex flex-col gap-4">
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-100 text-emerald-600 dark:bg-emerald-950/60 dark:text-emerald-400">
@@ -422,7 +751,9 @@ export default function AdminPage() {
             <input
               type="text"
               value={form.nombre}
-              onChange={(e) => setForm((f) => ({ ...f, nombre: e.target.value }))}
+              onChange={(e) =>
+                setForm((f) => ({ ...f, nombre: e.target.value }))
+              }
               className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 placeholder-zinc-400 focus:border-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-500 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100"
               placeholder="Nombre del usuario"
             />
@@ -435,7 +766,9 @@ export default function AdminPage() {
             <input
               type="email"
               value={form.email}
-              onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
+              onChange={(e) =>
+                setForm((f) => ({ ...f, email: e.target.value }))
+              }
               className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 placeholder-zinc-400 focus:border-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-500 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100"
               placeholder="correo@ejemplo.com"
             />
@@ -448,7 +781,9 @@ export default function AdminPage() {
             <input
               type="password"
               value={form.password}
-              onChange={(e) => setForm((f) => ({ ...f, password: e.target.value }))}
+              onChange={(e) =>
+                setForm((f) => ({ ...f, password: e.target.value }))
+              }
               className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 placeholder-zinc-400 focus:border-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-500 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100"
               placeholder="Contraseña"
             />
@@ -479,7 +814,10 @@ export default function AdminPage() {
         </form>
       </Modal>
 
-      <Modal open={!!editTarget} onClose={() => !editing && setEditTarget(null)}>
+      <Modal
+        open={!!editTarget}
+        onClose={() => !editing && setEditTarget(null)}
+      >
         {editTarget && (
           <form onSubmit={handleEdit} className="flex flex-col gap-4">
             <div className="flex items-center gap-3">
@@ -503,7 +841,9 @@ export default function AdminPage() {
               <input
                 type="text"
                 value={editForm.nombre}
-                onChange={(e) => setEditForm((f) => ({ ...f, nombre: e.target.value }))}
+                onChange={(e) =>
+                  setEditForm((f) => ({ ...f, nombre: e.target.value }))
+                }
                 className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 placeholder-zinc-400 focus:border-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-500 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100"
                 placeholder="Nombre del usuario"
               />
@@ -516,7 +856,9 @@ export default function AdminPage() {
               <input
                 type="email"
                 value={editForm.email}
-                onChange={(e) => setEditForm((f) => ({ ...f, email: e.target.value }))}
+                onChange={(e) =>
+                  setEditForm((f) => ({ ...f, email: e.target.value }))
+                }
                 className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 placeholder-zinc-400 focus:border-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-500 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100"
                 placeholder="correo@ejemplo.com"
               />
@@ -524,12 +866,15 @@ export default function AdminPage() {
 
             <div>
               <label className="mb-1 block text-xs font-medium text-zinc-600 dark:text-zinc-400">
-                Nueva contraseña <span className="text-zinc-400 font-normal">(opcional)</span>
+                Nueva contraseña{" "}
+                <span className="text-zinc-400 font-normal">(opcional)</span>
               </label>
               <input
                 type="password"
                 value={editForm.password}
-                onChange={(e) => setEditForm((f) => ({ ...f, password: e.target.value }))}
+                onChange={(e) =>
+                  setEditForm((f) => ({ ...f, password: e.target.value }))
+                }
                 className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 placeholder-zinc-400 focus:border-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-500 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100"
                 placeholder="Dejar en blanco para mantener"
               />
@@ -553,6 +898,335 @@ export default function AdminPage() {
                 Cancelar
               </Button>
               <Button className="flex-1" type="submit" loading={editing}>
+                <Pencil className="mr-1.5 h-4 w-4" />
+                Guardar
+              </Button>
+            </div>
+          </form>
+        )}
+      </Modal>
+
+      <Modal
+        open={!!deleteLugarTarget}
+        onClose={() => !deletingLugar && setDeleteLugarTarget(null)}
+      >
+        {deleteLugarTarget && (
+          <div className="flex flex-col gap-4">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-red-100 text-red-600 dark:bg-red-950/60 dark:text-red-400">
+                <AlertCircle className="h-5 w-5" />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">
+                  Eliminar lugar
+                </h3>
+                <p className="text-sm text-zinc-500">
+                  Esta acción no se puede deshacer.
+                </p>
+              </div>
+            </div>
+            <div className="rounded-lg border border-zinc-200 bg-zinc-50 p-3 dark:border-zinc-700 dark:bg-zinc-800">
+              <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100">
+                {deleteLugarTarget.nombre}
+              </p>
+              <p className="text-xs text-zinc-500">
+                {deleteLugarTarget.direccion}
+              </p>
+            </div>
+            <div className="flex gap-3">
+              <Button
+                variant="secondary"
+                className="flex-1"
+                onClick={() => setDeleteLugarTarget(null)}
+                disabled={deletingLugar}
+              >
+                Cancelar
+              </Button>
+              <Button
+                variant="danger"
+                className="flex-1"
+                loading={deletingLugar}
+                onClick={confirmDeleteLugar}
+              >
+                Eliminar
+              </Button>
+            </div>
+          </div>
+        )}
+      </Modal>
+
+      <Modal
+        open={createLugar}
+        onClose={() => !creatingLugar && setCreateLugar(false)}
+      >
+        <form onSubmit={handleCreateLugar} className="flex flex-col gap-4">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-100 text-emerald-600 dark:bg-emerald-950/60 dark:text-emerald-400">
+              <Plus className="h-5 w-5" />
+            </div>
+            <div>
+              <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">
+                Nuevo lugar
+              </h3>
+              <p className="text-sm text-zinc-500">
+                Registra un nuevo lugar de compras.
+              </p>
+            </div>
+          </div>
+          <div>
+            <label className="mb-1 block text-xs font-medium text-zinc-600 dark:text-zinc-400">
+              Nombre
+            </label>
+            <input
+              type="text"
+              value={createLugarForm.nombre}
+              onChange={(e) =>
+                setCreateLugarForm((f) => ({ ...f, nombre: e.target.value }))
+              }
+              className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 placeholder-zinc-400 focus:border-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-500 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100"
+              placeholder="Nombre del lugar"
+            />
+          </div>
+          <div>
+            <label className="mb-1 block text-xs font-medium text-zinc-600 dark:text-zinc-400">
+              Dirección
+            </label>
+            <input
+              type="text"
+              value={createLugarForm.direccion}
+              onChange={(e) =>
+                setCreateLugarForm((f) => ({ ...f, direccion: e.target.value }))
+              }
+              className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 placeholder-zinc-400 focus:border-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-500 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100"
+              placeholder="Dirección del lugar"
+            />
+          </div>
+          <div>
+            <label className="mb-1 block text-xs font-medium text-zinc-600 dark:text-zinc-400">
+              Descripción{" "}
+              <span className="font-normal text-zinc-400">(opcional)</span>
+            </label>
+            <input
+              type="text"
+              value={createLugarForm.descripcion}
+              onChange={(e) =>
+                setCreateLugarForm((f) => ({
+                  ...f,
+                  descripcion: e.target.value,
+                }))
+              }
+              className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 placeholder-zinc-400 focus:border-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-500 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100"
+              placeholder="Breve descripción"
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="mb-1 block text-xs font-medium text-zinc-600 dark:text-zinc-400">
+                Latitud{" "}
+                <span className="font-normal text-zinc-400">(opcional)</span>
+              </label>
+              <input
+                type="text"
+                value={createLugarForm.latitud}
+                onChange={(e) =>
+                  setCreateLugarForm((f) => ({ ...f, latitud: e.target.value }))
+                }
+                className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 placeholder-zinc-400 focus:border-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-500 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100"
+                placeholder="-33.456"
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-medium text-zinc-600 dark:text-zinc-400">
+                Longitud{" "}
+                <span className="font-normal text-zinc-400">(opcional)</span>
+              </label>
+              <input
+                type="text"
+                value={createLugarForm.longitud}
+                onChange={(e) =>
+                  setCreateLugarForm((f) => ({
+                    ...f,
+                    longitud: e.target.value,
+                  }))
+                }
+                className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 placeholder-zinc-400 focus:border-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-500 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100"
+                placeholder="-70.650"
+              />
+            </div>
+          </div>
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={createLugarForm.transferencia}
+              onChange={(e) =>
+                setCreateLugarForm((f) => ({
+                  ...f,
+                  transferencia: e.target.checked,
+                }))
+              }
+              className="h-4 w-4 rounded border-zinc-300 text-zinc-900 focus:ring-zinc-500 dark:border-zinc-600"
+            />
+            <span className="text-sm text-zinc-700 dark:text-zinc-300">
+              Acepta pago electrónico
+            </span>
+          </label>
+          {createLugarError && (
+            <div className="flex items-center gap-2 rounded-lg bg-red-50 p-3 text-sm text-red-600 dark:bg-red-950 dark:text-red-400">
+              <AlertCircle className="h-4 w-4 shrink-0" />
+              {createLugarError}
+            </div>
+          )}
+          <div className="flex gap-3">
+            <Button
+              variant="secondary"
+              type="button"
+              className="flex-1"
+              onClick={() => setCreateLugar(false)}
+              disabled={creatingLugar}
+            >
+              Cancelar
+            </Button>
+            <Button className="flex-1" type="submit" loading={creatingLugar}>
+              <Plus className="mr-1.5 h-4 w-4" />
+              Crear
+            </Button>
+          </div>
+        </form>
+      </Modal>
+
+      <Modal
+        open={!!editLugar}
+        onClose={() => !editingLugar && setEditLugar(null)}
+      >
+        {editLugar && (
+          <form onSubmit={handleEditLugar} className="flex flex-col gap-4">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-sky-100 text-sky-600 dark:bg-sky-950/60 dark:text-sky-400">
+                <Pencil className="h-5 w-5" />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">
+                  Editar lugar
+                </h3>
+                <p className="text-sm text-zinc-500">
+                  Actualiza los datos del lugar.
+                </p>
+              </div>
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-medium text-zinc-600 dark:text-zinc-400">
+                Nombre
+              </label>
+              <input
+                type="text"
+                value={editLugarForm.nombre}
+                onChange={(e) =>
+                  setEditLugarForm((f) => ({ ...f, nombre: e.target.value }))
+                }
+                className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 placeholder-zinc-400 focus:border-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-500 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100"
+                placeholder="Nombre del lugar"
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-medium text-zinc-600 dark:text-zinc-400">
+                Dirección
+              </label>
+              <input
+                type="text"
+                value={editLugarForm.direccion}
+                onChange={(e) =>
+                  setEditLugarForm((f) => ({ ...f, direccion: e.target.value }))
+                }
+                className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 placeholder-zinc-400 focus:border-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-500 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100"
+                placeholder="Dirección del lugar"
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-medium text-zinc-600 dark:text-zinc-400">
+                Descripción{" "}
+                <span className="font-normal text-zinc-400">(opcional)</span>
+              </label>
+              <input
+                type="text"
+                value={editLugarForm.descripcion}
+                onChange={(e) =>
+                  setEditLugarForm((f) => ({
+                    ...f,
+                    descripcion: e.target.value,
+                  }))
+                }
+                className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 placeholder-zinc-400 focus:border-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-500 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100"
+                placeholder="Breve descripción"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="mb-1 block text-xs font-medium text-zinc-600 dark:text-zinc-400">
+                  Latitud{" "}
+                  <span className="font-normal text-zinc-400">(opcional)</span>
+                </label>
+                <input
+                  type="text"
+                  value={editLugarForm.latitud}
+                  onChange={(e) =>
+                    setEditLugarForm((f) => ({ ...f, latitud: e.target.value }))
+                  }
+                  className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 placeholder-zinc-400 focus:border-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-500 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100"
+                  placeholder="-33.456"
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium text-zinc-600 dark:text-zinc-400">
+                  Longitud{" "}
+                  <span className="font-normal text-zinc-400">(opcional)</span>
+                </label>
+                <input
+                  type="text"
+                  value={editLugarForm.longitud}
+                  onChange={(e) =>
+                    setEditLugarForm((f) => ({
+                      ...f,
+                      longitud: e.target.value,
+                    }))
+                  }
+                  className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 placeholder-zinc-400 focus:border-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-500 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100"
+                  placeholder="-70.650"
+                />
+              </div>
+            </div>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={editLugarForm.transferencia}
+                onChange={(e) =>
+                  setEditLugarForm((f) => ({
+                    ...f,
+                    transferencia: e.target.checked,
+                  }))
+                }
+                className="h-4 w-4 rounded border-zinc-300 text-zinc-900 focus:ring-zinc-500 dark:border-zinc-600"
+              />
+              <span className="text-sm text-zinc-700 dark:text-zinc-300">
+                Acepta pago electrónico
+              </span>
+            </label>
+            {editLugarError && (
+              <div className="flex items-center gap-2 rounded-lg bg-red-50 p-3 text-sm text-red-600 dark:bg-red-950 dark:text-red-400">
+                <AlertCircle className="h-4 w-4 shrink-0" />
+                {editLugarError}
+              </div>
+            )}
+            <div className="flex gap-3">
+              <Button
+                variant="secondary"
+                type="button"
+                className="flex-1"
+                onClick={() => setEditLugar(null)}
+                disabled={editingLugar}
+              >
+                Cancelar
+              </Button>
+              <Button className="flex-1" type="submit" loading={editingLugar}>
                 <Pencil className="mr-1.5 h-4 w-4" />
                 Guardar
               </Button>

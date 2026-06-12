@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import * as lugarModel from "@/models/lugar";
 import { successResponse, errorResponse } from "@/lib/utils";
+import { requireAdmin, unauthorizedResponse } from "@/lib/admin-auth";
 
 export async function GET() {
   try {
@@ -14,6 +15,9 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   try {
+    const admin = await requireAdmin(request);
+    if (!admin) return unauthorizedResponse();
+
     const body = await request.json();
     const { nombre, descripcion, direccion, latitud, longitud, transferencia } = body;
 

@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import * as lugarModel from "@/models/lugar";
 import { successResponse, errorResponse } from "@/lib/utils";
+import { requireAdmin, unauthorizedResponse } from "@/lib/admin-auth";
 
 export async function GET(
   _request: NextRequest,
@@ -22,6 +23,9 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const admin = await requireAdmin(request);
+    if (!admin) return unauthorizedResponse();
+
     const { id } = await params;
     const body = await request.json();
     const lugar = await lugarModel.update(Number(id), body);
@@ -34,10 +38,13 @@ export async function PUT(
 }
 
 export async function DELETE(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const admin = await requireAdmin(request);
+    if (!admin) return unauthorizedResponse();
+
     const { id } = await params;
     const deleted = await lugarModel.remove(Number(id));
     if (!deleted) return errorResponse("Lugar no encontrado", 404);
