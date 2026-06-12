@@ -33,9 +33,6 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const userId = request.headers.get("x-user-id");
-    if (!userId) return errorResponse("No autenticado", 401);
-
     const { id } = await params;
     const lugarId = Number(id);
     if (!Number.isInteger(lugarId) || lugarId <= 0) {
@@ -61,9 +58,7 @@ export async function POST(
       imagen: imagen || null,
       escencial: Boolean(escencial),
       id_categ: id_categ || null,
-      idUsuario: Number(userId),
       idLugar: lugarId,
-      fuente: "manual",
     });
 
     return successResponse(producto, 201);

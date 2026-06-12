@@ -23,8 +23,11 @@ import {
   MapPin,
   CreditCard,
   ToggleLeft,
+  Package,
+  DollarSign,
+  Award,
 } from "lucide-react";
-import type { Usuario, Lugar } from "@/types";
+import type { Usuario, Lugar, Producto, Categoria } from "@/types";
 
 export default function AdminPage() {
   const { user, loading } = useAuth();
@@ -52,7 +55,6 @@ export default function AdminPage() {
   const [editing, setEditing] = useState(false);
   const [editError, setEditError] = useState("");
 
-  const [tab, setTab] = useState<"usuarios" | "lugares">("usuarios");
   const [lugares, setLugares] = useState<Lugar[]>([]);
   const [loadingLugares, setLoadingLugares] = useState(true);
   const [lugarSearch, setLugarSearch] = useState("");
@@ -82,6 +84,40 @@ export default function AdminPage() {
     null,
   );
   const [deletingLugar, setDeletingLugar] = useState(false);
+
+  const [tab, setTab] = useState<"usuarios" | "lugares" | "productos">(
+    "usuarios",
+  );
+  const [productos, setProductos] = useState<Producto[]>([]);
+  const [loadingProductos, setLoadingProductos] = useState(true);
+  const [productoSearch, setProductoSearch] = useState("");
+  const [categorias, setCategorias] = useState<Categoria[]>([]);
+  const [createProducto, setCreateProducto] = useState(false);
+  const [createProductoForm, setCreateProductoForm] = useState({
+    nombre: "",
+    precio: "",
+    id_lugar: "",
+    id_categ: "",
+    escencial: false,
+    notas: "",
+  });
+  const [creatingProducto, setCreatingProducto] = useState(false);
+  const [createProductoError, setCreateProductoError] = useState("");
+  const [editProducto, setEditProducto] = useState<Producto | null>(null);
+  const [editProductoForm, setEditProductoForm] = useState({
+    nombre: "",
+    precio: "",
+    id_lugar: "",
+    id_categ: "",
+    escencial: false,
+    notas: "",
+    activo: true,
+  });
+  const [editingProducto, setEditingProducto] = useState(false);
+  const [editProductoError, setEditProductoError] = useState("");
+  const [deleteProductoTarget, setDeleteProductoTarget] =
+    useState<Producto | null>(null);
+  const [deletingProducto, setDeletingProducto] = useState(false);
 
   const showToast = useCallback((type: "success" | "error", msg: string) => {
     setToast({ type, msg });
@@ -137,6 +173,33 @@ export default function AdminPage() {
         if (!cancelled) showToast("error", "Error al cargar lugares");
       } finally {
         if (!cancelled) setLoadingLugares(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [user, showToast]);
+
+  useEffect(() => {
+    if (user?.rol_id !== 1) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const [prodRes, catRes] = await Promise.all([
+          fetch("/api/productos"),
+          fetch("/api/categorias"),
+        ]);
+        if (!prodRes.ok) throw new Error("Error al cargar productos");
+        const prodJson = await prodRes.json();
+        if (!cancelled && prodJson.success) setProductos(prodJson.data);
+        if (catRes.ok) {
+          const catJson = await catRes.json();
+          if (!cancelled && catJson.success) setCategorias(catJson.data);
+        }
+      } catch {
+        if (!cancelled) showToast("error", "Error al cargar productos");
+      } finally {
+        if (!cancelled) setLoadingProductos(false);
       }
     })();
     return () => {
@@ -403,6 +466,148 @@ export default function AdminPage() {
     }
   }
 
+  function abrirCrearProducto() {
+    setCreateProductoForm({
+      nombre: "",
+      precio: "",
+      id_lugar: "",
+      id_categ: "",
+      escencial: false,
+      notas: "",
+    });
+    setCreateProductoError("");
+    setCreateProducto(true);
+  }
+
+  async function handleCreateProducto(e: React.FormEvent) {
+    e.preventDefault();
+    setCreateProductoError("");
+    if (
+      !createProductoForm.nombre.trim() ||
+      !createProductoForm.precio.trim() ||
+      !createProductoForm.id_lugar
+    ) {
+      setCreateProductoError("Nombre, precio y lugar son obligatorios");
+      return;
+    }
+    setCreatingProducto(true);
+    try {
+      const res = await fetch("/api/productos", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          nombre: createProductoForm.nombre.trim(),
+          precio: Number(createProductoForm.precio),
+          id_lugar: Number(createProductoForm.id_lugar),
+          id_categ: createProductoForm.id_categ
+            ? Number(createProductoForm.id_categ)
+            : null,
+          escencial: createProductoForm.escencial,
+          notas: createProductoForm.notas.trim() || null,
+        }),
+      });
+      const json = await res.json();
+      if (json.success) {
+        setProductos((prev) => [...prev, json.data]);
+        showToast("success", `Producto creado: ${json.data.nombre}`);
+        setCreateProducto(false);
+      } else {
+        setCreateProductoError(json.error);
+      }
+    } catch {
+      setCreateProductoError("Error al crear producto");
+    } finally {
+      setCreatingProducto(false);
+    }
+  }
+
+  function abrirEditarProducto(p: Producto) {
+    setEditProducto(p);
+    setEditProductoForm({
+      nombre: p.nombre,
+      precio: String(p.precio),
+      id_lugar: String(p.id_lugar),
+      id_categ: p.id_categ ? String(p.id_categ) : "",
+      escencial: p.escencial,
+      notas: p.notas || "",
+      activo: p.activo,
+    });
+    setEditProductoError("");
+  }
+
+  async function handleEditProducto(e: React.FormEvent) {
+    e.preventDefault();
+    if (!editProducto) return;
+    setEditProductoError("");
+    if (
+      !editProductoForm.nombre.trim() ||
+      !editProductoForm.precio.trim() ||
+      !editProductoForm.id_lugar
+    ) {
+      setEditProductoError("Nombre, precio y lugar son obligatorios");
+      return;
+    }
+    setEditingProducto(true);
+    try {
+      const res = await fetch(`/api/productos/${editProducto.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          nombre: editProductoForm.nombre.trim(),
+          precio: Number(editProductoForm.precio),
+          id_lugar: Number(editProductoForm.id_lugar),
+          id_categ: editProductoForm.id_categ
+            ? Number(editProductoForm.id_categ)
+            : null,
+          escencial: editProductoForm.escencial,
+          notas: editProductoForm.notas.trim() || null,
+          activo: editProductoForm.activo,
+        }),
+      });
+      const json = await res.json();
+      if (json.success) {
+        setProductos((prev) =>
+          prev.map((p) => (p.id === editProducto.id ? json.data : p)),
+        );
+        showToast("success", `Producto actualizado: ${json.data.nombre}`);
+        setEditProducto(null);
+      } else {
+        setEditProductoError(json.error);
+      }
+    } catch {
+      setEditProductoError("Error al actualizar producto");
+    } finally {
+      setEditingProducto(false);
+    }
+  }
+
+  async function confirmDeleteProducto() {
+    if (!deleteProductoTarget) return;
+    setDeletingProducto(true);
+    try {
+      const res = await fetch(`/api/productos/${deleteProductoTarget.id}`, {
+        method: "DELETE",
+      });
+      const json = await res.json();
+      if (json.success) {
+        setProductos((prev) =>
+          prev.filter((p) => p.id !== deleteProductoTarget.id),
+        );
+        showToast(
+          "success",
+          `Producto eliminado: ${deleteProductoTarget.nombre}`,
+        );
+        setDeleteProductoTarget(null);
+      } else {
+        showToast("error", json.error);
+      }
+    } catch {
+      showToast("error", "Error al eliminar producto");
+    } finally {
+      setDeletingProducto(false);
+    }
+  }
+
   const filtered = search.trim()
     ? usuarios.filter(
         (u) =>
@@ -410,6 +615,16 @@ export default function AdminPage() {
           normalize(u.email).includes(normalize(search.trim())),
       )
     : usuarios;
+
+  const filteredProductos = productoSearch.trim()
+    ? productos.filter(
+        (p) =>
+          normalize(p.nombre).includes(normalize(productoSearch.trim())) ||
+          (p.categoria || "")
+            .toLowerCase()
+            .includes(productoSearch.trim().toLowerCase()),
+      )
+    : productos;
 
   if (loading || !user || user.rol_id !== 1) {
     return (
@@ -458,6 +673,18 @@ export default function AdminPage() {
           <Store className="h-4 w-4" />
           Lugares
         </button>
+        <button
+          type="button"
+          onClick={() => setTab("productos")}
+          className={`flex flex-1 items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-all ${
+            tab === "productos"
+              ? "bg-white text-zinc-900 shadow-sm dark:bg-zinc-900 dark:text-zinc-100"
+              : "text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-200"
+          }`}
+        >
+          <Package className="h-4 w-4" />
+          Productos
+        </button>
       </div>
 
       <Card>
@@ -466,22 +693,42 @@ export default function AdminPage() {
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
             <input
               type="text"
-              value={tab === "usuarios" ? search : lugarSearch}
+              value={
+                tab === "usuarios"
+                  ? search
+                  : tab === "lugares"
+                    ? lugarSearch
+                    : productoSearch
+              }
               onChange={(e) =>
                 tab === "usuarios"
                   ? setSearch(e.target.value)
-                  : setLugarSearch(e.target.value)
+                  : tab === "lugares"
+                    ? setLugarSearch(e.target.value)
+                    : setProductoSearch(e.target.value)
               }
               placeholder={
-                tab === "usuarios" ? "Buscar usuarios..." : "Buscar lugares..."
+                tab === "usuarios"
+                  ? "Buscar usuarios..."
+                  : tab === "lugares"
+                    ? "Buscar lugares..."
+                    : "Buscar productos..."
               }
               className="w-full rounded-lg border border-zinc-300 bg-white py-2 pl-9 pr-9 text-sm text-zinc-900 placeholder-zinc-400 focus:border-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-500 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100 dark:placeholder-zinc-500"
             />
-            {(tab === "usuarios" ? search : lugarSearch) && (
+            {(tab === "usuarios"
+              ? search
+              : tab === "lugares"
+                ? lugarSearch
+                : productoSearch) && (
               <button
                 type="button"
                 onClick={() =>
-                  tab === "usuarios" ? setSearch("") : setLugarSearch("")
+                  tab === "usuarios"
+                    ? setSearch("")
+                    : tab === "lugares"
+                      ? setLugarSearch("")
+                      : setProductoSearch("")
                 }
                 aria-label="Limpiar búsqueda"
                 className="absolute right-2 top-1/2 flex h-6 w-6 -translate-y-1/2 items-center justify-center rounded-md text-zinc-400 transition-colors hover:bg-zinc-100 hover:text-zinc-700 dark:hover:bg-zinc-700 dark:hover:text-zinc-200"
@@ -492,11 +739,19 @@ export default function AdminPage() {
           </div>
           <Button
             onClick={
-              tab === "usuarios" ? () => setShowCreate(true) : abrirCrearLugar
+              tab === "usuarios"
+                ? () => setShowCreate(true)
+                : tab === "lugares"
+                  ? abrirCrearLugar
+                  : abrirCrearProducto
             }
           >
             <Plus className="mr-1.5 h-4 w-4" />
-            {tab === "usuarios" ? "Nuevo usuario" : "Nuevo lugar"}
+            {tab === "usuarios"
+              ? "Nuevo usuario"
+              : tab === "lugares"
+                ? "Nuevo lugar"
+                : "Nuevo producto"}
           </Button>
         </div>
 
@@ -610,47 +865,127 @@ export default function AdminPage() {
               ))}
             </div>
           )
-        ) : loadingLugares ? (
+        ) : tab === "lugares" ? (
+          loadingLugares ? (
+            <p className="py-8 text-center text-sm text-zinc-500">
+              Cargando lugares...
+            </p>
+          ) : filteredLugares.length === 0 ? (
+            <div className="flex flex-col items-center gap-2 py-8 text-center">
+              <Store className="h-10 w-10 text-zinc-300 dark:text-zinc-600" />
+              <p className="text-sm text-zinc-500">
+                {lugarSearch
+                  ? "No se encontraron lugares"
+                  : "No hay lugares registrados"}
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {filteredLugares.map((l) => (
+                <div
+                  key={l.id}
+                  className="flex flex-col gap-2 rounded-lg border border-zinc-200/70 px-4 py-3 transition-all hover:border-zinc-300 sm:flex-row sm:items-center sm:gap-3 dark:border-zinc-800/60 dark:hover:border-zinc-700"
+                >
+                  <div className="flex min-w-0 flex-1 items-center gap-3">
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-sky-100 text-sky-700 dark:bg-sky-950/60 dark:text-sky-300">
+                      <Store className="h-4 w-4" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2">
+                        <p className="truncate text-sm font-medium text-zinc-900 dark:text-zinc-100">
+                          {l.nombre}
+                        </p>
+                        {l.transferencia && (
+                          <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-sky-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-sky-700 dark:bg-sky-950/50 dark:text-sky-300">
+                            <CreditCard className="h-3 w-3" />
+                            Pago elec.
+                          </span>
+                        )}
+                      </div>
+                      <div className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-zinc-400">
+                        <span className="inline-flex items-center gap-1">
+                          <MapPin className="h-3 w-3" />
+                          {l.direccion}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex shrink-0 items-center justify-end gap-1.5 sm:self-center">
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      onClick={() => abrirEditarLugar(l)}
+                      title="Editar lugar"
+                    >
+                      <Pencil className="h-3.5 w-3.5" />
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="danger"
+                      onClick={() => setDeleteLugarTarget(l)}
+                      title="Eliminar lugar"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )
+        ) : loadingProductos ? (
           <p className="py-8 text-center text-sm text-zinc-500">
-            Cargando lugares...
+            Cargando productos...
           </p>
-        ) : filteredLugares.length === 0 ? (
+        ) : filteredProductos.length === 0 ? (
           <div className="flex flex-col items-center gap-2 py-8 text-center">
-            <Store className="h-10 w-10 text-zinc-300 dark:text-zinc-600" />
+            <Package className="h-10 w-10 text-zinc-300 dark:text-zinc-600" />
             <p className="text-sm text-zinc-500">
-              {lugarSearch
-                ? "No se encontraron lugares"
-                : "No hay lugares registrados"}
+              {productoSearch
+                ? "No se encontraron productos"
+                : "No hay productos registrados"}
             </p>
           </div>
         ) : (
           <div className="space-y-2">
-            {filteredLugares.map((l) => (
+            {filteredProductos.map((p) => (
               <div
-                key={l.id}
+                key={p.id}
                 className="flex flex-col gap-2 rounded-lg border border-zinc-200/70 px-4 py-3 transition-all hover:border-zinc-300 sm:flex-row sm:items-center sm:gap-3 dark:border-zinc-800/60 dark:hover:border-zinc-700"
               >
                 <div className="flex min-w-0 flex-1 items-center gap-3">
-                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-sky-100 text-sky-700 dark:bg-sky-950/60 dark:text-sky-300">
-                    <Store className="h-4 w-4" />
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-violet-100 text-violet-700 dark:bg-violet-950/60 dark:text-violet-300">
+                    <Package className="h-4 w-4" />
                   </div>
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
                       <p className="truncate text-sm font-medium text-zinc-900 dark:text-zinc-100">
-                        {l.nombre}
+                        {p.nombre}
                       </p>
-                      {l.transferencia && (
-                        <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-sky-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-sky-700 dark:bg-sky-950/50 dark:text-sky-300">
-                          <CreditCard className="h-3 w-3" />
-                          Pago elec.
+                      {!p.activo && (
+                        <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-rose-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-rose-600 dark:bg-rose-950/50 dark:text-rose-400">
+                          Inactivo
                         </span>
                       )}
                     </div>
                     <div className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-zinc-400">
                       <span className="inline-flex items-center gap-1">
-                        <MapPin className="h-3 w-3" />
-                        {l.direccion}
+                        <DollarSign className="h-3 w-3" />
+                        {Number(p.precio).toLocaleString("es-CL", {
+                          style: "currency",
+                          currency: "CLP",
+                        })}
                       </span>
+                      {p.categoria && (
+                        <span className="inline-flex items-center gap-1">
+                          <Award className="h-3 w-3" />
+                          {p.categoria}
+                        </span>
+                      )}
+                      {p.escencial && (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-1.5 py-0.5 text-[10px] font-medium text-amber-700 dark:bg-amber-950/50 dark:text-amber-400">
+                          Esencial
+                        </span>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -658,16 +993,16 @@ export default function AdminPage() {
                   <Button
                     size="sm"
                     variant="secondary"
-                    onClick={() => abrirEditarLugar(l)}
-                    title="Editar lugar"
+                    onClick={() => abrirEditarProducto(p)}
+                    title="Editar producto"
                   >
                     <Pencil className="h-3.5 w-3.5" />
                   </Button>
                   <Button
                     size="sm"
                     variant="danger"
-                    onClick={() => setDeleteLugarTarget(l)}
-                    title="Eliminar lugar"
+                    onClick={() => setDeleteProductoTarget(p)}
+                    title="Eliminar producto"
                   >
                     <Trash2 className="h-3.5 w-3.5" />
                   </Button>
@@ -1227,6 +1562,421 @@ export default function AdminPage() {
                 Cancelar
               </Button>
               <Button className="flex-1" type="submit" loading={editingLugar}>
+                <Pencil className="mr-1.5 h-4 w-4" />
+                Guardar
+              </Button>
+            </div>
+          </form>
+        )}
+      </Modal>
+
+      <Modal
+        open={!!deleteProductoTarget}
+        onClose={() => !deletingProducto && setDeleteProductoTarget(null)}
+      >
+        {deleteProductoTarget && (
+          <div className="flex flex-col gap-4">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-red-100 text-red-600 dark:bg-red-950/60 dark:text-red-400">
+                <AlertCircle className="h-5 w-5" />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">
+                  Eliminar producto
+                </h3>
+                <p className="text-sm text-zinc-500">
+                  Esta acción no se puede deshacer.
+                </p>
+              </div>
+            </div>
+            <div className="rounded-lg border border-zinc-200 bg-zinc-50 p-3 dark:border-zinc-700 dark:bg-zinc-800">
+              <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100">
+                {deleteProductoTarget.nombre}
+              </p>
+              <p className="text-xs text-zinc-500">
+                {Number(deleteProductoTarget.precio).toLocaleString("es-CL", {
+                  style: "currency",
+                  currency: "CLP",
+                })}
+              </p>
+            </div>
+            <div className="flex gap-3">
+              <Button
+                variant="secondary"
+                className="flex-1"
+                onClick={() => setDeleteProductoTarget(null)}
+                disabled={deletingProducto}
+              >
+                Cancelar
+              </Button>
+              <Button
+                variant="danger"
+                className="flex-1"
+                loading={deletingProducto}
+                onClick={confirmDeleteProducto}
+              >
+                Eliminar
+              </Button>
+            </div>
+          </div>
+        )}
+      </Modal>
+
+      <Modal
+        open={createProducto}
+        onClose={() => !creatingProducto && setCreateProducto(false)}
+      >
+        <form
+          onSubmit={handleCreateProducto}
+          className="flex flex-col gap-4"
+        >
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-100 text-emerald-600 dark:bg-emerald-950/60 dark:text-emerald-400">
+              <Plus className="h-5 w-5" />
+            </div>
+            <div>
+              <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">
+                Nuevo producto
+              </h3>
+              <p className="text-sm text-zinc-500">
+                El producto se creará como activo.
+              </p>
+            </div>
+          </div>
+
+          <div>
+            <label className="mb-1 block text-xs font-medium text-zinc-600 dark:text-zinc-400">
+              Nombre
+            </label>
+            <input
+              type="text"
+              value={createProductoForm.nombre}
+              onChange={(e) =>
+                setCreateProductoForm((f) => ({
+                  ...f,
+                  nombre: e.target.value,
+                }))
+              }
+              className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 placeholder-zinc-400 focus:border-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-500 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100"
+              placeholder="Nombre del producto"
+            />
+          </div>
+
+          <div>
+            <label className="mb-1 block text-xs font-medium text-zinc-600 dark:text-zinc-400">
+              Precio
+            </label>
+            <input
+              type="number"
+              step="1"
+              min="0"
+              value={createProductoForm.precio}
+              onChange={(e) =>
+                setCreateProductoForm((f) => ({
+                  ...f,
+                  precio: e.target.value,
+                }))
+              }
+              className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 placeholder-zinc-400 focus:border-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-500 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100"
+              placeholder="0"
+            />
+          </div>
+
+          <div>
+            <label className="mb-1 block text-xs font-medium text-zinc-600 dark:text-zinc-400">
+              Lugar
+            </label>
+            <select
+              value={createProductoForm.id_lugar}
+              onChange={(e) =>
+                setCreateProductoForm((f) => ({
+                  ...f,
+                  id_lugar: e.target.value,
+                }))
+              }
+              className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 focus:border-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-500 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100"
+            >
+              <option value="">Seleccionar lugar</option>
+              {lugares.map((l) => (
+                <option key={l.id} value={l.id}>
+                  {l.nombre}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="mb-1 block text-xs font-medium text-zinc-600 dark:text-zinc-400">
+              Categoría{" "}
+              <span className="font-normal text-zinc-400">(opcional)</span>
+            </label>
+            <select
+              value={createProductoForm.id_categ}
+              onChange={(e) =>
+                setCreateProductoForm((f) => ({
+                  ...f,
+                  id_categ: e.target.value,
+                }))
+              }
+              className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 focus:border-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-500 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100"
+            >
+              <option value="">Sin categoría</option>
+              {categorias.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.nombre}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="mb-1 block text-xs font-medium text-zinc-600 dark:text-zinc-400">
+              Notas{" "}
+              <span className="font-normal text-zinc-400">(opcional)</span>
+            </label>
+            <textarea
+              value={createProductoForm.notas}
+              onChange={(e) =>
+                setCreateProductoForm((f) => ({
+                  ...f,
+                  notas: e.target.value,
+                }))
+              }
+              rows={2}
+              className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 placeholder-zinc-400 focus:border-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-500 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100"
+              placeholder="Notas adicionales"
+            />
+          </div>
+
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={createProductoForm.escencial}
+              onChange={(e) =>
+                setCreateProductoForm((f) => ({
+                  ...f,
+                  escencial: e.target.checked,
+                }))
+              }
+              className="h-4 w-4 rounded border-zinc-300 text-zinc-900 focus:ring-zinc-500 dark:border-zinc-600"
+            />
+            <span className="text-sm text-zinc-700 dark:text-zinc-300">
+              Producto esencial
+            </span>
+          </label>
+
+          {createProductoError && (
+            <div className="flex items-center gap-2 rounded-lg bg-red-50 p-3 text-sm text-red-600 dark:bg-red-950 dark:text-red-400">
+              <AlertCircle className="h-4 w-4 shrink-0" />
+              {createProductoError}
+            </div>
+          )}
+
+          <div className="flex gap-3">
+            <Button
+              variant="secondary"
+              type="button"
+              className="flex-1"
+              onClick={() => setCreateProducto(false)}
+              disabled={creatingProducto}
+            >
+              Cancelar
+            </Button>
+            <Button
+              className="flex-1"
+              type="submit"
+              loading={creatingProducto}
+            >
+              <Plus className="mr-1.5 h-4 w-4" />
+              Crear
+            </Button>
+          </div>
+        </form>
+      </Modal>
+
+      <Modal
+        open={!!editProducto}
+        onClose={() => !editingProducto && setEditProducto(null)}
+      >
+        {editProducto && (
+          <form
+            onSubmit={handleEditProducto}
+            className="flex flex-col gap-4"
+          >
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-sky-100 text-sky-600 dark:bg-sky-950/60 dark:text-sky-400">
+                <Pencil className="h-5 w-5" />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">
+                  Editar producto
+                </h3>
+                <p className="text-sm text-zinc-500">
+                  Actualiza los datos del producto.
+                </p>
+              </div>
+            </div>
+
+            <div>
+              <label className="mb-1 block text-xs font-medium text-zinc-600 dark:text-zinc-400">
+                Nombre
+              </label>
+              <input
+                type="text"
+                value={editProductoForm.nombre}
+                onChange={(e) =>
+                  setEditProductoForm((f) => ({
+                    ...f,
+                    nombre: e.target.value,
+                  }))
+                }
+                className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 placeholder-zinc-400 focus:border-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-500 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100"
+                placeholder="Nombre del producto"
+              />
+            </div>
+
+            <div>
+              <label className="mb-1 block text-xs font-medium text-zinc-600 dark:text-zinc-400">
+                Precio
+              </label>
+              <input
+                type="number"
+                step="1"
+                min="0"
+                value={editProductoForm.precio}
+                onChange={(e) =>
+                  setEditProductoForm((f) => ({
+                    ...f,
+                    precio: e.target.value,
+                  }))
+                }
+                className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 placeholder-zinc-400 focus:border-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-500 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100"
+                placeholder="0"
+              />
+            </div>
+
+            <div>
+              <label className="mb-1 block text-xs font-medium text-zinc-600 dark:text-zinc-400">
+                Lugar
+              </label>
+              <select
+                value={editProductoForm.id_lugar}
+                onChange={(e) =>
+                  setEditProductoForm((f) => ({
+                    ...f,
+                    id_lugar: e.target.value,
+                  }))
+                }
+                className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 focus:border-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-500 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100"
+              >
+                <option value="">Seleccionar lugar</option>
+                {lugares.map((l) => (
+                  <option key={l.id} value={l.id}>
+                    {l.nombre}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="mb-1 block text-xs font-medium text-zinc-600 dark:text-zinc-400">
+                Categoría{" "}
+                <span className="font-normal text-zinc-400">(opcional)</span>
+              </label>
+              <select
+                value={editProductoForm.id_categ}
+                onChange={(e) =>
+                  setEditProductoForm((f) => ({
+                    ...f,
+                    id_categ: e.target.value,
+                  }))
+                }
+                className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 focus:border-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-500 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100"
+              >
+                <option value="">Sin categoría</option>
+                {categorias.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.nombre}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="mb-1 block text-xs font-medium text-zinc-600 dark:text-zinc-400">
+                Notas{" "}
+                <span className="font-normal text-zinc-400">(opcional)</span>
+              </label>
+              <textarea
+                value={editProductoForm.notas}
+                onChange={(e) =>
+                  setEditProductoForm((f) => ({
+                    ...f,
+                    notas: e.target.value,
+                  }))
+                }
+                rows={2}
+                className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 placeholder-zinc-400 focus:border-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-500 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100"
+                placeholder="Notas adicionales"
+              />
+            </div>
+
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={editProductoForm.escencial}
+                onChange={(e) =>
+                  setEditProductoForm((f) => ({
+                    ...f,
+                    escencial: e.target.checked,
+                  }))
+                }
+                className="h-4 w-4 rounded border-zinc-300 text-zinc-900 focus:ring-zinc-500 dark:border-zinc-600"
+              />
+              <span className="text-sm text-zinc-700 dark:text-zinc-300">
+                Producto esencial
+              </span>
+            </label>
+
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={editProductoForm.activo}
+                onChange={(e) =>
+                  setEditProductoForm((f) => ({
+                    ...f,
+                    activo: e.target.checked,
+                  }))
+                }
+                className="h-4 w-4 rounded border-zinc-300 text-zinc-900 focus:ring-zinc-500 dark:border-zinc-600"
+              />
+              <span className="text-sm text-zinc-700 dark:text-zinc-300">
+                Producto activo
+              </span>
+            </label>
+
+            {editProductoError && (
+              <div className="flex items-center gap-2 rounded-lg bg-red-50 p-3 text-sm text-red-600 dark:bg-red-950 dark:text-red-400">
+                <AlertCircle className="h-4 w-4 shrink-0" />
+                {editProductoError}
+              </div>
+            )}
+
+            <div className="flex gap-3">
+              <Button
+                variant="secondary"
+                type="button"
+                className="flex-1"
+                onClick={() => setEditProducto(null)}
+                disabled={editingProducto}
+              >
+                Cancelar
+              </Button>
+              <Button
+                className="flex-1"
+                type="submit"
+                loading={editingProducto}
+              >
                 <Pencil className="mr-1.5 h-4 w-4" />
                 Guardar
               </Button>

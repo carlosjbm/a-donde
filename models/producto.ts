@@ -9,9 +9,9 @@ import {
   PrecioHistorialPeriodo,
 } from "@/types";
 
-export async function findAll():Promise<Producto[]> {
-  const [rows]=await pool.query("SELECT * FROM productos")
-  return rows as Producto[]
+export async function findAll(): Promise<Producto[]> {
+  const [rows] = await pool.query("SELECT * FROM productos");
+  return rows as Producto[];
 }
 
 export async function findById(
@@ -116,14 +116,16 @@ export async function getPriceHistory(
     params,
   );
 
-  const puntos = (rows as Array<{
-    periodo: string;
-    fecha_inicio: Date;
-    promedio: number;
-    minimo: number;
-    maximo: number;
-    cantidad: number;
-  }>).map((r) => ({
+  const puntos = (
+    rows as Array<{
+      periodo: string;
+      fecha_inicio: Date;
+      promedio: number;
+      minimo: number;
+      maximo: number;
+      cantidad: number;
+    }>
+  ).map((r) => ({
     periodo: String(r.periodo),
     fecha_inicio:
       r.fecha_inicio instanceof Date
@@ -144,11 +146,13 @@ export async function getPriceHistory(
      WHERE p.id = ?`,
     [excludeId ?? -1],
   );
-  const refProduct = (metaRows as Array<{
-    precio: number;
-    nombre: string;
-    lugar_nombre: string;
-  }>)[0];
+  const refProduct = (
+    metaRows as Array<{
+      precio: number;
+      nombre: string;
+      lugar_nombre: string;
+    }>
+  )[0];
 
   let precioActual: number;
   let lugarActual: string;
@@ -176,11 +180,13 @@ export async function getPriceHistory(
        LIMIT 1`,
       fallbackParams,
     );
-    const fallback = (fallbackRows as Array<{
-      precio: number;
-      nombre: string;
-      lugar_nombre: string;
-    }>)[0];
+    const fallback = (
+      fallbackRows as Array<{
+        precio: number;
+        nombre: string;
+        lugar_nombre: string;
+      }>
+    )[0];
     if (!fallback) return null;
     precioActual = Number(fallback.precio);
     lugarActual = fallback.lugar_nombre;
@@ -270,7 +276,13 @@ export async function updatePrecio(
       `INSERT INTO producto_precios
          (id_producto, precio, id_usuario, fuente, notas)
        VALUES (?, ?, ?, ?, ?)`,
-      [idProducto, precio, idUsuario ?? null, fuente ?? "manual", notas ?? null],
+      [
+        idProducto,
+        precio,
+        idUsuario ?? null,
+        fuente ?? "manual",
+        notas ?? null,
+      ],
     );
     const newPriceId = insertResult.insertId;
 
@@ -286,12 +298,15 @@ export async function updatePrecio(
       [newPriceId],
     );
     const createdAt = String(
-      (createdRows as Array<{ created_at: string }>)[0]?.created_at ?? new Date().toISOString(),
+      (createdRows as Array<{ created_at: string }>)[0]?.created_at ??
+        new Date().toISOString(),
     );
 
     const variacion =
       precioAnterior > 0
-        ? Number((((precio - precioAnterior) / precioAnterior) * 100).toFixed(2))
+        ? Number(
+            (((precio - precioAnterior) / precioAnterior) * 100).toFixed(2),
+          )
         : 0;
 
     return {
@@ -309,19 +324,16 @@ export async function updatePrecio(
   }
 }
 
-export async function create(
-  data: {
-    nombre: string;
-    precio: number;
-    notas?: string | null;
-    imagen?: string | null;
-    escencial?: boolean;
-    id_categ?: number | null;
-    idUsuario: number;
-    idLugar: number;
-    fuente: string;
-  }
-): Promise<Producto> {
+export async function create(data: {
+  nombre: string;
+  precio: number;
+  notas?: string | null;
+  imagen?: string | null;
+  escencial?: boolean;
+  id_categ?: number | null;
+
+  idLugar: number;
+}): Promise<Producto> {
   const {
     nombre,
     precio,
@@ -329,26 +341,15 @@ export async function create(
     imagen,
     escencial,
     id_categ,
-    idUsuario,
+
     idLugar,
-    fuente,
   } = data;
 
   const [result] = await pool.query(
     `INSERT INTO productos 
-     (nombre, precio, notas, imagen, escencial, id_categ, id_usuario, id_lugar, fuente, fech_act_precio)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
-    [
-      nombre,
-      precio,
-      notas,
-      imagen,
-      escencial,
-      id_categ,
-      idUsuario,
-      idLugar,
-      fuente,
-    ]
+     (nombre, precio, notas, imagen, escencial, id_categ, id_lugar, activo, fech_act_precio)
+     VALUES (?, ?, ?, ?, ?, ?, ?, true, NOW())`,
+    [nombre, precio, notas, imagen, escencial, id_categ, idLugar],
   );
 
   const id = (result as { insertId: number }).insertId;
@@ -357,7 +358,7 @@ export async function create(
 
 export async function update(
   id: number,
-  data: Partial<Omit<Producto, "id" | "created_at" | "updated_at">>
+  data: Partial<Omit<Producto, "id" | "created_at" | "updated_at">>,
 ): Promise<Producto | null> {
   const fields: string[] = [];
   const values: unknown[] = [];
@@ -396,21 +397,26 @@ export async function update(
   values.push(id);
   await pool.query(
     `UPDATE productos SET ${fields.join(", ")}, fech_act_precio = NOW() WHERE id = ?`,
-    values
+    values,
   );
   return findById(id, true);
 }
 
-export async function deleteProducto(id: number, userId: number): Promise<boolean> {
+export async function deleteProducto(
+  id: number,
+  userId: number,
+): Promise<boolean> {
   const conn = await pool.getConnection();
   try {
     await conn.beginTransaction();
 
     const [productoRows] = await conn.query<RowDataPacket[]>(
       "SELECT id, id_lugar FROM productos WHERE id = ?",
-      [id]
+      [id],
     );
-    const producto = (productoRows as Array<{ id: number; id_lugar: number }>)[0];
+    const producto = (
+      productoRows as Array<{ id: number; id_lugar: number }>
+    )[0];
     if (!producto) {
       await conn.rollback();
       throw new Error("Producto no encontrado");
@@ -418,7 +424,7 @@ export async function deleteProducto(id: number, userId: number): Promise<boolea
 
     const [deletedRows] = await conn.query<ResultSetHeader>(
       "DELETE FROM productos WHERE id = ?",
-      [id]
+      [id],
     );
 
     if (deletedRows.affectedRows === 0) {
