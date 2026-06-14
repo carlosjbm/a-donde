@@ -1,0 +1,1 @@
+ALTER TABLE paks_productos ADD COLUMN cantidad INT NOT NULL DEFAULT 1;

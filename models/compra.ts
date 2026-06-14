@@ -61,12 +61,11 @@ export async function create(data: {
   const presupuestos = await presupuestoModel.findByUserId(user_id);
   if (presupuestos.length === 0) throw new Error("No tienes presupuesto asignado");
 
-  const gastado = await totalGastado(user_id);
   const totalPresupuesto = presupuestos.reduce(
     (sum, p) => sum + Number(p.valor),
     0
   );
-  const disponible = totalPresupuesto - gastado;
+  const disponible = totalPresupuesto;
 
   if (disponible < precio)
     throw new Error(
@@ -98,13 +97,4 @@ export async function create(data: {
   return { compra, nuevo_valor: nuevoValor };
 }
 
-async function totalGastado(userId: number): Promise<number> {
-  const [rows] = await pool.query(
-    `SELECT COALESCE(SUM(p.precio), 0) AS total
-     FROM compras c
-     JOIN productos p ON c.id_producto = p.id
-     WHERE c.user_id = ?`,
-    [userId]
-  );
-  return Number((rows as { total: number }[])[0].total);
-}
+

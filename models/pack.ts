@@ -15,7 +15,8 @@ export async function findByUserId(userId: number): Promise<UserPack[]> {
        pr.imagen AS producto_imagen,
        pr.id_lugar AS lugar_id,
        l.nombre AS lugar_nombre,
-       c.id AS compra_id
+       c.id AS compra_id,
+       pp.cantidad AS cantidad
       FROM packs pa
       LEFT JOIN paks_productos pp ON pp.id_pack = pa.id
       LEFT JOIN productos pr ON pp.id_prod = pr.id
@@ -39,6 +40,7 @@ export async function findByUserId(userId: number): Promise<UserPack[]> {
     lugar_id: number | null;
     lugar_nombre: string | null;
     compra_id: number | null;
+    cantidad: number | null;
   };
 
   const packsMap = new Map<number, UserPack>();
@@ -64,6 +66,7 @@ export async function findByUserId(userId: number): Promise<UserPack[]> {
       producto_id: r.producto_id!,
       nombre: r.producto_nombre!,
       precio: Number(r.producto_precio),
+      cantidad: r.cantidad ?? 1,
       imagen: r.producto_imagen,
       lugar_id: r.lugar_id!,
       lugar_nombre: r.lugar_nombre!,
@@ -77,7 +80,7 @@ export async function findByUserId(userId: number): Promise<UserPack[]> {
     pack.total_productos = pack.productos.length;
     pack.comprados = pack.productos.filter((p) => p.comprado).length;
     pack.pendientes = pack.total_productos - pack.comprados;
-    pack.precio_total = pack.productos.reduce((sum, p) => sum + Number(p.precio), 0);
+    pack.precio_total = pack.productos.reduce((sum, p) => sum + Number(p.precio) * p.cantidad, 0);
   }
 
   return Array.from(packsMap.values());
@@ -113,7 +116,8 @@ export async function remove(id: number, userId: number): Promise<boolean> {
 export async function addProduct(
   packId: number,
   productoId: number,
-  userId: number
+  userId: number,
+  cantidad: number = 1
 ): Promise<number> {
   const [existing] = await pool.query(
     "SELECT id FROM paks_productos WHERE id_pack = ? AND id_prod = ?",
@@ -123,8 +127,8 @@ export async function addProduct(
     throw new Error("El producto ya está en el pack");
   }
   const [result] = await pool.query(
-    "INSERT INTO paks_productos (id_pack, id_prod, usuario_id) VALUES (?, ?, ?)",
-    [packId, productoId, userId]
+    "INSERT INTO paks_productos (id_pack, id_prod, usuario_id, cantidad) VALUES (?, ?, ?, ?)",
+    [packId, productoId, userId, cantidad]
   );
   return (result as { insertId: number }).insertId;
 }
@@ -142,7 +146,7 @@ export async function removeProduct(
 
 export async function getPendingCount(userId: number): Promise<number> {
   const [rows] = await pool.query(
-    `SELECT COUNT(*) AS total
+    `SELECT COALESCE(SUM(pp.cantidad), 0) AS total
      FROM paks_productos pp
      JOIN packs pa ON pp.id_pack = pa.id
      LEFT JOIN compras c ON c.id_producto = pp.id_prod AND c.user_id = ?

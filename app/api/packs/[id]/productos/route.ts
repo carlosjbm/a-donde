@@ -15,10 +15,13 @@ export async function POST(
     if (!packId) return errorResponse("ID de pack inválido", 400);
 
     const body = await request.json();
-    const { producto_id } = body;
+    const { producto_id, cantidad } = body;
     if (!producto_id) return errorResponse("producto_id es requerido", 400);
 
-    const result = await packModel.addProduct(packId, Number(producto_id), Number(userId));
+    const qty = Number(cantidad) || 1;
+    if (qty < 1) return errorResponse("La cantidad debe ser al menos 1", 400);
+
+    const result = await packModel.addProduct(packId, Number(producto_id), Number(userId), qty);
     return successResponse({ id: result }, 201);
   } catch (error) {
     const message = error instanceof Error ? error.message : "Error al agregar producto";

@@ -33,6 +33,7 @@ export interface Presupuesto {
   descripcion: string;
   created_date: Date;
   valor: number;
+  valor_inicial: number;
   user_id: number;
 }
 
@@ -132,6 +133,7 @@ export interface PackProducto {
   producto_id: number;
   nombre: string;
   precio: number;
+  cantidad: number;
   imagen: string | null;
   lugar_id: number;
   lugar_nombre: string;

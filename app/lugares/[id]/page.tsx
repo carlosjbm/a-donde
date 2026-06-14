@@ -167,6 +167,7 @@ export default function LugarDetailPage() {
   const [showLocation, setShowLocation] = useState(false);
   const [copiedField, setCopiedField] = useState<"lat" | "lng" | null>(null);
   const [packProducto, setPackProducto] = useState<Producto | null>(null);
+  const [packCantidad, setPackCantidad] = useState(1);
   const [userPacks, setUserPacks] = useState<UserPack[]>([]);
   const [addingToPack, setAddingToPack] = useState<Set<number>>(new Set());
   const [toast, setToast] = useState<{ type: "success" | "error"; msg: string } | null>(null);
@@ -293,6 +294,7 @@ export default function LugarDetailPage() {
       return;
     }
     setPackProducto(producto);
+    setPackCantidad(1);
     try {
       const res = await fetch("/api/packs/mine");
       const json = await res.json();
@@ -309,12 +311,13 @@ export default function LugarDetailPage() {
       const res = await fetch(`/api/packs/${packId}/productos`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ producto_id: packProducto.id }),
+        body: JSON.stringify({ producto_id: packProducto.id, cantidad: packCantidad }),
       });
       const json = await res.json();
       if (json.success) {
         showToast("success", `"${packProducto.nombre}" agregado al pack`);
         setPackProducto(null);
+        setPackCantidad(1);
       } else {
         showToast("error", json.error);
       }
@@ -359,6 +362,7 @@ export default function LugarDetailPage() {
       if (compJson.success) setCompras(compJson.data);
       if (presJson.success) setPresupuestos(presJson.data);
 
+      window.dispatchEvent(new CustomEvent("budget-update"));
       setCompraExitosa(true);
     } catch {
       setErrorMsg("Error al realizar la compra");
@@ -424,7 +428,11 @@ export default function LugarDetailPage() {
   }
 
   const gastado = compras.reduce((s, c) => s + Number(c.producto_precio), 0);
-  const disponible = totalPresupuesto - gastado;
+  const totalPresupuestoInicial = presupuestos.reduce(
+    (s, p) => s + Number(p.valor_inicial),
+    0,
+  );
+  const disponible = totalPresupuesto;
 
   const normalize = (s: string) =>
     s
@@ -612,10 +620,10 @@ className={`flex flex-col gap-3 rounded-lg border p-4 transition-all hover:bg-zi
           <Card title="Tu presupuesto">
             <div className="flex items-center gap-2">
               <Wallet className="h-5 w-5 text-zinc-500" />
-              <p className="text-xs text-zinc-500">Total presupuestado</p>
+              <p className="text-xs text-zinc-500">Presupuesto original</p>
             </div>
             <p className="mt-1 text-2xl font-bold text-zinc-900 dark:text-zinc-100">
-              ${totalPresupuesto.toLocaleString("es-CL")}
+              ${totalPresupuestoInicial.toLocaleString("es-CL")}
             </p>
             <div className="mt-3 space-y-2">
               <div className="flex items-center gap-2 rounded-lg bg-red-50 px-3 py-2 dark:bg-red-950">
@@ -915,7 +923,7 @@ className={`flex flex-col gap-3 rounded-lg border p-4 transition-all hover:bg-zi
                     Agregar a pack
                   </h3>
                   <p className="text-xs text-zinc-500 dark:text-zinc-400">
-                    {packProducto.nombre} — ${Number(packProducto.precio).toLocaleString("es-CL")}
+                    {packProducto.nombre} — ${Number(packProducto.precio).toLocaleString("es-CL")} c/u
                   </p>
                 </div>
               </div>
@@ -928,6 +936,44 @@ className={`flex flex-col gap-3 rounded-lg border p-4 transition-all hover:bg-zi
                 <X className="h-4 w-4" />
               </button>
             </div>
+
+            <div className="flex items-center gap-3 rounded-lg border border-zinc-200/70 bg-zinc-50 px-3 py-2.5 dark:border-zinc-800/60 dark:bg-zinc-900/40">
+              <label className="text-xs font-medium text-zinc-600 dark:text-zinc-400">
+                Cantidad
+              </label>
+              <div className="ml-auto flex items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => setPackCantidad((q) => Math.max(1, q - 1))}
+                  className="flex h-7 w-7 items-center justify-center rounded-md border border-zinc-200 bg-white text-zinc-600 transition-colors hover:bg-zinc-100 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700"
+                >
+                  −
+                </button>
+                <input
+                  type="number"
+                  min={1}
+                  max={999}
+                  value={packCantidad}
+                  onChange={(e) => {
+                    const v = parseInt(e.target.value, 10);
+                    if (!isNaN(v) && v >= 1 && v <= 999) setPackCantidad(v);
+                  }}
+                  className="h-7 w-12 rounded-md border border-zinc-200 bg-white text-center text-sm font-medium tabular-nums text-zinc-900 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100 [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                />
+                <button
+                  type="button"
+                  onClick={() => setPackCantidad((q) => Math.min(999, q + 1))}
+                  className="flex h-7 w-7 items-center justify-center rounded-md border border-zinc-200 bg-white text-zinc-600 transition-colors hover:bg-zinc-100 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700"
+                >
+                  +
+                </button>
+              </div>
+            </div>
+            {packCantidad > 1 && (
+              <p className="text-xs text-right font-medium text-violet-600 dark:text-violet-400">
+                Subtotal: ${(Number(packProducto.precio) * packCantidad).toLocaleString("es-CL")}
+              </p>
+            )}
 
             {userPacks.length === 0 ? (
               <div className="flex flex-col items-center gap-2 py-6 text-center">

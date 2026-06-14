@@ -217,6 +217,7 @@ function BudgetItem({
   isPrimary: boolean;
 }) {
   const valor = Number(presupuesto.valor);
+  const valorInicial = Number(presupuesto.valor_inicial);
   return (
     <div
       className="group relative overflow-hidden rounded-xl border border-zinc-200/70 bg-white p-3.5 transition-all duration-200 hover:-translate-y-px hover:border-zinc-300 hover:shadow-sm dark:border-zinc-800/60 dark:bg-zinc-900/40 dark:hover:border-zinc-700"
@@ -251,6 +252,11 @@ function BudgetItem({
           <p className="text-sm font-bold tabular-nums text-zinc-900 dark:text-zinc-100">
             {formatCLP(valor)}
           </p>
+          {valorInicial !== valor && (
+            <span className="inline-flex items-center gap-1 rounded-md bg-zinc-100 px-1.5 py-0.5 text-[9px] font-medium tabular-nums text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400">
+              Original: {formatCLP(valorInicial)}
+            </span>
+          )}
         </div>
       </div>
     </div>
@@ -562,18 +568,22 @@ export default function PerfilPage() {
     (sum, p) => sum + Number(p.valor),
     0,
   );
+  const totalPresupuestoInicial = presupuestos.reduce(
+    (sum, p) => sum + Number(p.valor_inicial),
+    0,
+  );
   const totalGastado = compras.reduce(
     (sum, c) => sum + Number(c.producto_precio),
     0,
   );
-  const disponible = totalPresupuesto - totalGastado;
+  const disponible = totalPresupuesto;
   const enDespensa = compras.filter((c) => !c.agotado).length;
   const agotados = compras.filter((c) => c.agotado).length;
   const totalCompras = compras.length;
 
   const usoPct =
-    totalPresupuesto > 0
-      ? Math.min(100, Math.round((totalGastado / totalPresupuesto) * 100))
+    totalPresupuestoInicial > 0
+      ? Math.min(100, Math.round((totalGastado / totalPresupuestoInicial) * 100))
       : 0;
   const usoColor =
     usoPct < 50
@@ -682,6 +692,7 @@ export default function PerfilPage() {
       setDescripcion("");
       setValor("");
       setShowForm(false);
+      window.dispatchEvent(new CustomEvent("budget-update"));
       showToast("success", "Presupuesto creado");
     } catch {
       setError("Error al crear presupuesto");
@@ -869,7 +880,7 @@ export default function PerfilPage() {
                   {usoPct}%
                 </p>
                 <p className="text-xs text-zinc-500 dark:text-zinc-400">
-                  {formatCLP(totalGastado)} de {formatCLP(totalPresupuesto)}
+                  {formatCLP(totalGastado)} de {formatCLP(totalPresupuestoInicial)}
                 </p>
               </div>
             </div>
@@ -1241,8 +1252,13 @@ export default function PerfilPage() {
                                 >
                                   {prod.nombre}
                                 </span>
+                                {prod.cantidad > 1 && (
+                                  <span className="shrink-0 rounded bg-violet-100 px-1.5 py-0.5 text-[10px] font-bold text-violet-700 dark:bg-violet-950/60 dark:text-violet-300">
+                                    x{prod.cantidad}
+                                  </span>
+                                )}
                                 <span className="shrink-0 text-[11px] font-medium tabular-nums text-zinc-500 dark:text-zinc-400">
-                                  ${Number(prod.precio).toLocaleString("es-CL")}
+                                  ${(Number(prod.precio) * prod.cantidad).toLocaleString("es-CL")}
                                 </span>
                                 <span className="hidden truncate text-[10px] text-zinc-400 sm:inline dark:text-zinc-500">
                                   {prod.lugar_nombre}

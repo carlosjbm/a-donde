@@ -24,11 +24,11 @@ export async function findByUserId(userId: number): Promise<Presupuesto[]> {
 }
 
 export async function create(
-  data: Omit<Presupuesto, "id" | "created_date">
+  data: Pick<Presupuesto, "descripcion" | "user_id"> & { valor: number }
 ): Promise<Presupuesto> {
   const [result] = await pool.query(
-    "INSERT INTO presupuestos (descripcion, valor, user_id, created_date) VALUES (?, ?, ?, NOW())",
-    [data.descripcion, data.valor, data.user_id]
+    "INSERT INTO presupuestos (descripcion, valor, valor_inicial, user_id, created_date) VALUES (?, ?, ?, ?, NOW())",
+    [data.descripcion, data.valor, data.valor, data.user_id]
   );
   const id = (result as { insertId: number }).insertId;
   return (await findById(id))!;
@@ -36,7 +36,7 @@ export async function create(
 
 export async function update(
   id: number,
-  data: Partial<Omit<Presupuesto, "id" | "created_date">>
+  data: Partial<Pick<Presupuesto, "descripcion" | "valor">>
 ): Promise<Presupuesto | null> {
   const fields: string[] = [];
   const values: unknown[] = [];

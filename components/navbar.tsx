@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useAuth } from "@/contexts/auth-context";
 import { Button } from "@/components/ui/button";
 import { SearchBar } from "@/components/search-bar";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import {
   User,
   Shield,
@@ -20,19 +20,15 @@ import {
 export function Navbar() {
   const { user, loading, logout } = useAuth();
   const [presupuestoTotal, setPresupuestoTotal] = useState<number | null>(null);
-  const [gastado, setGastado] = useState(0);
   const [pendingCount, setPendingCount] = useState(0);
 
-  useEffect(() => {
-    if (!user) {
-      return;
-    }
-
-    Promise.all([
-      fetch("/api/presupuestos/mine").then((r) => r.json()),
-      fetch("/api/compras/mine").then((r) => r.json()),
-      fetch("/api/packs/pending-count").then((r) => r.json()),
-    ]).then(([presJson, compJson, packJson]) => {
+  const fetchData = useCallback(async () => {
+    if (!user) return;
+    try {
+      const [presJson, packJson] = await Promise.all([
+        fetch("/api/presupuestos/mine").then((r) => r.json()),
+        fetch("/api/packs/pending-count").then((r) => r.json()),
+      ]);
       if (presJson.success) {
         const total = presJson.data.reduce(
           (s: number, p: { valor: number }) => s + Number(p.valor),
@@ -40,22 +36,41 @@ export function Navbar() {
         );
         setPresupuestoTotal(total);
       }
-      if (compJson.success) {
-        const totalGastado = compJson.data.reduce(
-          (s: number, c: { producto_precio: number }) =>
-            s + Number(c.producto_precio),
-          0,
-        );
-        setGastado(totalGastado);
-      }
       if (packJson.success) {
         setPendingCount(packJson.data.count);
       }
-    });
+    } catch {
+      /* ignore */
+    }
   }, [user]);
 
-  const disponible =
-    presupuestoTotal !== null ? presupuestoTotal - gastado : null;
+  const fetchRef = useRef(fetchData);
+  fetchRef.current = fetchData;
+
+  useEffect(() => {
+    if (!user) return;
+    const id = setInterval(() => fetchRef.current(), 30000);
+    const onVisible = () => {
+      if (document.visibilityState === "visible") fetchRef.current();
+    };
+    const onFocus = () => fetchRef.current();
+    const onBudgetUpdate = () => fetchRef.current();
+
+    document.addEventListener("visibilitychange", onVisible);
+    window.addEventListener("focus", onFocus);
+    window.addEventListener("budget-update", onBudgetUpdate);
+
+    fetchRef.current();
+
+    return () => {
+      clearInterval(id);
+      document.removeEventListener("visibilitychange", onVisible);
+      window.removeEventListener("focus", onFocus);
+      window.removeEventListener("budget-update", onBudgetUpdate);
+    };
+  }, [user]);
+
+  const disponible = presupuestoTotal;
 
   return (
     <nav className="sticky top-0 z-50 border-b border-zinc-200 bg-white/80 backdrop-blur-md dark:border-zinc-800 dark:bg-zinc-900/80">
