@@ -1,7 +1,11 @@
 "use client";
 
-import { useEffect, useState, type ElementType } from "react";
-import { DollarSign, Package } from "lucide-react";
+import { useEffect, useState, useCallback, type ElementType } from "react";
+import { useRouter } from "next/navigation";
+import { useAuth } from "@/contexts/auth-context";
+import { Modal } from "@/components/ui/modal";
+import { Button } from "@/components/ui/button";
+import { Package, ShoppingCart, AlertCircle, Check } from "lucide-react";
 import {
   ShoppingBag,
   Beef,
@@ -29,14 +33,7 @@ import {
   Pizza,
   Wrench,
 } from "lucide-react";
-import type { Categoria } from "@/types";
-
-type ProductDisplay = {
-  id: number;
-  nombre: string;
-  precio: number;
-  escencial: boolean;
-};
+import type { Categoria, Producto } from "@/types";
 
 const iconMap: Record<string, ElementType> = {
   supermercados: ShoppingBag,
@@ -242,13 +239,18 @@ const colorStyles: Record<
 };
 
 export function CategoryGrid() {
+  const { user } = useAuth();
+  const router = useRouter();
   const [categories, setCategories] = useState<Categoria[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
-  const [categoryProducts, setCategoryProducts] = useState<ProductDisplay[]>(
-    [],
-  );
+  const [selectedCatId, setSelectedCatId] = useState<number | null>(null);
+  const [selectedCatName, setSelectedCatName] = useState<string | null>(null);
+  const [categoryProducts, setCategoryProducts] = useState<Producto[]>([]);
   const [loadingProducts, setLoadingProducts] = useState(false);
+  const [buyProduct, setBuyProduct] = useState<Producto | null>(null);
+  const [buying, setBuying] = useState(false);
+  const [buyError, setBuyError] = useState("");
+  const [buySuccess, setBuySuccess] = useState(false);
 
   useEffect(() => {
     fetch("/api/categorias")
@@ -263,52 +265,81 @@ export function CategoryGrid() {
       .finally(() => setLoading(false));
   }, []);
 
-  const handleCategoryClick = (nombre: string) => {
-    if (selectedCategory === nombre) {
-      setSelectedCategory(null);
-      setCategoryProducts([]);
+  const handleCategoryClick = useCallback(
+    async (cat: Categoria) => {
+      if (selectedCatId === cat.id) {
+        setSelectedCatId(null);
+        setSelectedCatName(null);
+        setCategoryProducts([]);
+        return;
+      }
+
+      setSelectedCatId(cat.id);
+      setSelectedCatName(cat.nombre);
+      setLoadingProducts(true);
+
+      try {
+        const res = await fetch(`/api/categorias/${cat.id}/productos`);
+        const json = await res.json();
+        if (json.success) {
+          setCategoryProducts(json.data);
+        } else {
+          setCategoryProducts([]);
+        }
+      } catch {
+        setCategoryProducts([]);
+      } finally {
+        setLoadingProducts(false);
+      }
+    },
+    [selectedCatId],
+  );
+
+  function abrirCompra(producto: Producto) {
+    if (!user) {
+      router.push("/login?redirect=/");
       return;
     }
+    setBuyProduct(producto);
+    setBuyError("");
+    setBuySuccess(false);
+  }
 
-    setSelectedCategory(nombre);
-    setLoadingProducts(true);
-
-    // Mock data for demonstration - in a real app, this would call an API
-    setTimeout(() => {
-      const mockProducts = [
-        {
-          id: 1,
-          nombre: `Producto ${nombre} - Premium`,
-          precio: Math.floor(Math.random() * 5000) + 5000,
-          escencial:
-            nombre === "Supermercados" ||
-            nombre === "Carnicerías" ||
-            nombre === "Frutas y Verduras",
+  async function confirmarCompra() {
+    if (!buyProduct) return;
+    setBuying(true);
+    setBuyError("");
+    try {
+      const res = await fetch("/api/compras/mine", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-user-id": String(user!.id),
         },
-        {
-          id: 2,
-          nombre: `Producto ${nombre} - Estándar`,
-          precio: Math.floor(Math.random() * 3000) + 2000,
-          escencial: false,
-        },
-        {
-          id: 3,
-          nombre: `Producto ${nombre} - Básico`,
-          precio: Math.floor(Math.random() * 2000) + 1000,
-          escencial: false,
-        },
-      ].sort((a, b) => b.precio - a.precio); // Sort by price descending
-
-      setCategoryProducts(mockProducts);
-      setLoadingProducts(false);
-    }, 500);
-  };
+        body: JSON.stringify({ id_producto: buyProduct.id }),
+      });
+      const json = await res.json();
+      if (json.success) {
+        setBuySuccess(true);
+        setTimeout(() => {
+          setBuyProduct(null);
+          setBuySuccess(false);
+        }, 1800);
+      } else {
+        setBuyError(json.error || "Error al comprar");
+      }
+    } catch {
+      setBuyError("Error al realizar la compra");
+    } finally {
+      setBuying(false);
+    }
+  }
 
   const display = loading
     ? []
     : categories.length > 0
-      ? categories.map((c) => ({ nombre: c.nombre }))
-      : defaultCategories;
+      ? categories
+      : defaultCategories.map((c, i) => ({ id: i + 1, nombre: c.nombre, descripcion: "", icono: null, created_at: "", updated_at: "" }));
 
   if (loading) {
     return (
@@ -354,17 +385,16 @@ export function CategoryGrid() {
               const style = colorStyles[colorName] || colorStyles.zinc;
               const Icon = getCategoryIcon(cat.nombre);
 
-              const isSelected = selectedCategory === cat.nombre;
+              const isSelected = selectedCatId === cat.id;
 
               return (
                 <div
                   key={cat.nombre}
                   className="cursor-pointer"
-                  onClick={() => handleCategoryClick(cat.nombre)}
+                  onClick={() => handleCategoryClick(cat)}
                 >
                   <div
-                    className={`group flex flex-col items-center gap-3 rounded-xl border border-zinc-200 ${style.bg} px-4 py-6 transition-all duration-200 hover:shadow-lg ${style.hover} dark:border-zinc-800 ${isSelected ? "ring-2 ring-offset-2 ring-current" : ""}`}
-                    style={{ ringColor: style.iconColor }}
+                    className={`group flex flex-col items-center gap-3 rounded-xl border-2 px-4 py-6 transition-all duration-200 hover:shadow-lg dark:border-zinc-800 ${isSelected ? `${style.bg} ${style.iconColor} shadow-lg` : `${style.bg} border-zinc-200 hover:border-zinc-300 ${style.hover}`}`}
                   >
                     <div
                       className={`flex h-12 w-12 items-center justify-center rounded-xl ${style.iconBg} transition-transform duration-200 ${isSelected ? "scale-110 rotate-3" : "group-hover:scale-110 group-hover:rotate-3"}`}
@@ -384,16 +414,17 @@ export function CategoryGrid() {
         </div>
       </section>
 
-      {selectedCategory && (
+      {selectedCatId && (
         <section className="border-t border-zinc-200 bg-white py-12 dark:border-zinc-800 dark:bg-zinc-950 sm:py-16">
           <div className="mx-auto max-w-5xl px-4">
             <div className="mb-8 flex items-center justify-between">
               <h3 className="text-2xl font-bold text-zinc-900 dark:text-zinc-50">
-                Productos de {selectedCategory}
+                Productos de {selectedCatName}
               </h3>
               <button
                 onClick={() => {
-                  setSelectedCategory(null);
+                  setSelectedCatId(null);
+                  setSelectedCatName(null);
                   setCategoryProducts([]);
                 }}
                 className="rounded-lg border border-zinc-300 bg-white px-4 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50 hover:text-zinc-900 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700"
@@ -403,13 +434,13 @@ export function CategoryGrid() {
             </div>
 
             {loadingProducts ? (
-              <div className="text-center py-8">
+              <div className="py-8 text-center">
                 <p className="text-zinc-500 dark:text-zinc-400">
                   Cargando productos...
                 </p>
               </div>
             ) : categoryProducts.length === 0 ? (
-              <div className="text-center py-8">
+              <div className="py-8 text-center">
                 <Package className="mx-auto h-12 w-12 text-zinc-300 dark:text-zinc-600" />
                 <p className="mt-2 text-zinc-500 dark:text-zinc-400">
                   No hay productos disponibles en esta categoría
@@ -433,22 +464,31 @@ export function CategoryGrid() {
                             currency: "CLP",
                           })}
                         </p>
-                        {producto.escencial && (
-                          <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-medium text-amber-700 dark:bg-amber-950/50 dark:text-amber-400">
-                            Esencial
-                          </span>
-                        )}
+                        <div className="mt-1 flex flex-wrap gap-1">
+                          {producto.escencial && (
+                            <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-medium text-amber-700 dark:bg-amber-950/50 dark:text-amber-400">
+                              Esencial
+                            </span>
+                          )}
+                          {producto.categoria && (
+                            <span className="inline-flex items-center gap-1 rounded-full bg-zinc-100 px-2 py-0.5 text-[10px] font-medium text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400">
+                              {producto.categoria}
+                            </span>
+                          )}
+                        </div>
                       </div>
                       <Package className="h-5 w-5 text-zinc-300 dark:text-zinc-600" />
                     </div>
 
                     <div className="mt-auto flex gap-2">
-                      <button className="flex-1 rounded-lg bg-zinc-900 px-3 py-2 text-sm font-medium text-white hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200">
-                        Ver detalles
-                      </button>
-                      <button className="rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700">
+                      <Button
+                        size="sm"
+                        className="flex-1"
+                        onClick={() => abrirCompra(producto)}
+                      >
+                        <ShoppingCart className="mr-1.5 h-4 w-4" />
                         Comprar
-                      </button>
+                      </Button>
                     </div>
                   </div>
                 ))}
@@ -457,6 +497,83 @@ export function CategoryGrid() {
           </div>
         </section>
       )}
+
+      <Modal
+        open={!!buyProduct}
+        onClose={() => !buying && !buySuccess && setBuyProduct(null)}
+      >
+        {buyProduct && !buySuccess && (
+          <div className="flex flex-col gap-4">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-100 text-emerald-600 dark:bg-emerald-950/60 dark:text-emerald-400">
+                <ShoppingCart className="h-5 w-5" />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">
+                  Confirmar compra
+                </h3>
+                <p className="text-sm text-zinc-500">
+                  ¿Deseas comprar este producto?
+                </p>
+              </div>
+            </div>
+
+            <div className="rounded-lg border border-zinc-200 bg-zinc-50 p-3 dark:border-zinc-700 dark:bg-zinc-800">
+              <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100">
+                {buyProduct.nombre}
+              </p>
+              <p className="text-sm text-zinc-500">
+                {Number(buyProduct.precio).toLocaleString("es-CL", {
+                  style: "currency",
+                  currency: "CLP",
+                })}
+              </p>
+            </div>
+
+            {buyError && (
+              <div className="flex items-center gap-2 rounded-lg bg-red-50 p-3 text-sm text-red-600 dark:bg-red-950 dark:text-red-400">
+                <AlertCircle className="h-4 w-4 shrink-0" />
+                {buyError}
+              </div>
+            )}
+
+            <div className="flex gap-3">
+              <Button
+                variant="secondary"
+                className="flex-1"
+                onClick={() => setBuyProduct(null)}
+                disabled={buying}
+              >
+                Cancelar
+              </Button>
+              <Button
+                className="flex-1"
+                loading={buying}
+                onClick={confirmarCompra}
+              >
+                <ShoppingCart className="mr-1.5 h-4 w-4" />
+                Comprar
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {buySuccess && (
+          <div className="flex flex-col items-center gap-4 py-6">
+            <div className="flex h-14 w-14 items-center justify-center rounded-full bg-emerald-100 dark:bg-emerald-950/60">
+              <Check className="h-7 w-7 text-emerald-600 dark:text-emerald-400" />
+            </div>
+            <div className="text-center">
+              <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">
+                Compra realizada
+              </h3>
+              <p className="text-sm text-zinc-500">
+                {buyProduct?.nombre} se ha agregado a tu lista
+              </p>
+            </div>
+          </div>
+        )}
+      </Modal>
     </>
   );
 }

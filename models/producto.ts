@@ -33,6 +33,17 @@ export async function findByLugarId(lugarId: number): Promise<Producto[]> {
   return rows as Producto[];
 }
 
+export async function findByCategoriaId(
+  categoriaId: number,
+  limit = 5,
+): Promise<Producto[]> {
+  const [rows] = await pool.query(
+    "SELECT p.*, c.nombre AS categoria FROM productos p JOIN categorias c ON p.id_categ = c.id WHERE p.id_categ = ? AND p.activo = true ORDER BY p.precio DESC LIMIT ?",
+    [categoriaId, limit],
+  );
+  return rows as Producto[];
+}
+
 export async function searchByNombre(
   query: string,
 ): Promise<ProductoSearchResult[]> {

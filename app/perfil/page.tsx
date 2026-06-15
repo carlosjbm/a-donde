@@ -1088,7 +1088,7 @@ export default function PerfilPage() {
                 </h2>
                 <p className="text-xs text-zinc-500 dark:text-zinc-400">
                   {packs.length > 0
-                    ? `${packs.reduce((s, p) => s + p.pendientes, 0)} productos pendientes`
+                    ? `${packs.reduce((s, p) => s + (p.total_unidades - p.unidades_compradas), 0)} unidades pendientes`
                     : "Crea listas de compras"}
                 </p>
               </div>
@@ -1132,9 +1132,9 @@ export default function PerfilPage() {
               <div className="space-y-3">
                 {packs.map((pack, i) => {
                   const pct =
-                    pack.total_productos > 0
+                    pack.total_unidades > 0
                       ? Math.round(
-                          (pack.comprados / pack.total_productos) * 100,
+                          (pack.unidades_compradas / pack.total_unidades) * 100,
                         )
                       : 0;
                   return (
@@ -1158,7 +1158,7 @@ export default function PerfilPage() {
                             {pack.pendientes > 0 && (
                               <span className="inline-flex items-center gap-1 rounded-full bg-rose-100 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-rose-700 dark:bg-rose-950/60 dark:text-rose-300">
                                 <Bell className="h-2.5 w-2.5" />
-                                {pack.pendientes}
+                                {pack.total_unidades - pack.unidades_compradas}
                               </span>
                             )}
                             {pack.pendientes === 0 &&
@@ -1183,7 +1183,7 @@ export default function PerfilPage() {
                               />
                             </div>
                             <span className="shrink-0 text-[10px] font-medium tabular-nums text-zinc-500 dark:text-zinc-400">
-                              {pack.comprados}/{pack.total_productos}
+                              {pack.unidades_compradas}/{pack.total_unidades}
                             </span>
                           </div>
                         </div>
@@ -1225,7 +1225,9 @@ export default function PerfilPage() {
                       {pack.productos.length > 0 && (
                         <div className="border-t border-zinc-200/70 px-4 pb-3 pt-2 dark:border-zinc-800/60 sm:px-5">
                           <div className="space-y-1">
-                            {pack.productos.map((prod) => (
+                            {pack.productos.map((prod) => {
+                              const parcial = prod.cantidad > 1 && prod.unidades_compradas > 0 && !prod.comprado;
+                              return (
                               <div
                                 key={prod.id}
                                 className={`flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 ${
@@ -1238,7 +1240,9 @@ export default function PerfilPage() {
                                   className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-xs ${
                                     prod.comprado
                                       ? "bg-emerald-100 text-emerald-600 dark:bg-emerald-950/60 dark:text-emerald-400"
-                                      : "bg-zinc-100 text-zinc-400 dark:bg-zinc-800"
+                                      : parcial
+                                        ? "bg-amber-100 text-amber-600 dark:bg-amber-950/60 dark:text-amber-400"
+                                        : "bg-zinc-100 text-zinc-400 dark:bg-zinc-800"
                                   }`}
                                 >
                                   {prod.comprado ? (
@@ -1257,8 +1261,20 @@ export default function PerfilPage() {
                                   {prod.nombre}
                                 </span>
                                 {prod.cantidad > 1 && (
-                                  <span className="shrink-0 rounded bg-violet-100 px-1.5 py-0.5 text-[10px] font-bold text-violet-700 dark:bg-violet-950/60 dark:text-violet-300">
-                                    x{prod.cantidad}
+                                  <span
+                                    className={`shrink-0 rounded px-1.5 py-0.5 text-[10px] font-bold ${
+                                      prod.comprado
+                                        ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300"
+                                        : parcial
+                                          ? "bg-amber-100 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300"
+                                          : "bg-violet-100 text-violet-700 dark:bg-violet-950/60 dark:text-violet-300"
+                                    }`}
+                                  >
+                                    {prod.comprado
+                                      ? `\u2713x${prod.cantidad}`
+                                      : parcial
+                                        ? `${prod.unidades_compradas}/${prod.cantidad}`
+                                        : `x${prod.cantidad}`}
                                   </span>
                                 )}
                                 <span className="shrink-0 text-[11px] font-medium tabular-nums text-zinc-500 dark:text-zinc-400">
@@ -1271,7 +1287,8 @@ export default function PerfilPage() {
                                   {prod.lugar_nombre}
                                 </span>
                               </div>
-                            ))}
+                              );
+                            })}
                           </div>
                         </div>
                       )}

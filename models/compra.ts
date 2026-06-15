@@ -88,6 +88,16 @@ export async function create(data: {
   );
   const compraId = (result as { insertId: number }).insertId;
 
+  await pool.query(
+    `UPDATE paks_productos pp
+     JOIN packs pa ON pp.id_pack = pa.id
+     SET pp.unidades_compradas = LEAST(pp.unidades_compradas + 1, pp.cantidad)
+     WHERE pp.id_prod = ?
+       AND pa.usuario_id = ?
+       AND pp.unidades_compradas < pp.cantidad`,
+    [id_producto, user_id]
+  );
+
   const [compraRows] = await pool.query(
     "SELECT id, create_at, observacion, id_producto, user_id, agotado, fecha_agotado FROM compras WHERE id = ?",
     [compraId]

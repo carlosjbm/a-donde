@@ -5,6 +5,10 @@ import { useAuth } from "@/contexts/auth-context";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Modal } from "@/components/ui/modal";
+const MapPicker = dynamic(() => import("@/components/map-picker"), {
+  ssr: false,
+});
+import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import {
   Shield,
@@ -1294,7 +1298,7 @@ export default function AdminPage() {
         open={createLugar}
         onClose={() => !creatingLugar && setCreateLugar(false)}
       >
-        <form onSubmit={handleCreateLugar} className="flex flex-col gap-4">
+        <form onSubmit={handleCreateLugar} className="flex flex-col gap-3 sm:gap-4">
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-100 text-emerald-600 dark:bg-emerald-950/60 dark:text-emerald-400">
               <Plus className="h-5 w-5" />
@@ -1354,7 +1358,27 @@ export default function AdminPage() {
               placeholder="Breve descripción"
             />
           </div>
-          <div className="grid grid-cols-2 gap-3">
+          <MapPicker
+            lat={
+              createLugarForm.latitud
+                ? Number(createLugarForm.latitud)
+                : null
+            }
+            lng={
+              createLugarForm.longitud
+                ? Number(createLugarForm.longitud)
+                : null
+            }
+            onChange={(lat, lng, address) =>
+              setCreateLugarForm((f) => ({
+                ...f,
+                latitud: String(lat),
+                longitud: String(lng),
+                ...(address ? { direccion: address } : {}),
+              }))
+            }
+          />
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div>
               <label className="mb-1 block text-xs font-medium text-zinc-600 dark:text-zinc-400">
                 Latitud{" "}
@@ -1434,7 +1458,7 @@ export default function AdminPage() {
         onClose={() => !editingLugar && setEditLugar(null)}
       >
         {editLugar && (
-          <form onSubmit={handleEditLugar} className="flex flex-col gap-4">
+          <form onSubmit={handleEditLugar} className="flex flex-col gap-3 sm:gap-4">
             <div className="flex items-center gap-3">
               <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-sky-100 text-sky-600 dark:bg-sky-950/60 dark:text-sky-400">
                 <Pencil className="h-5 w-5" />
@@ -1494,7 +1518,27 @@ export default function AdminPage() {
                 placeholder="Breve descripción"
               />
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            <MapPicker
+              lat={
+                editLugarForm.latitud
+                  ? Number(editLugarForm.latitud)
+                  : null
+              }
+              lng={
+                editLugarForm.longitud
+                  ? Number(editLugarForm.longitud)
+                  : null
+              }
+              onChange={(lat, lng, address) =>
+                setEditLugarForm((f) => ({
+                  ...f,
+                  latitud: String(lat),
+                  longitud: String(lng),
+                  ...(address ? { direccion: address } : {}),
+                }))
+              }
+            />
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div>
                 <label className="mb-1 block text-xs font-medium text-zinc-600 dark:text-zinc-400">
                   Latitud{" "}

@@ -15,16 +15,15 @@ export async function findByUserId(userId: number): Promise<UserPack[]> {
        pr.imagen AS producto_imagen,
        pr.id_lugar AS lugar_id,
        l.nombre AS lugar_nombre,
-       c.id AS compra_id,
-       pp.cantidad AS cantidad
+       pp.cantidad AS cantidad,
+       pp.unidades_compradas AS unidades_compradas
       FROM packs pa
       LEFT JOIN paks_productos pp ON pp.id_pack = pa.id
       LEFT JOIN productos pr ON pp.id_prod = pr.id
       LEFT JOIN lugares l ON pr.id_lugar = l.id
-      LEFT JOIN compras c ON c.id_producto = pr.id AND c.user_id = ?
      WHERE pa.usuario_id = ?
      ORDER BY pa.id ASC, pr.nombre ASC`,
-    [userId, userId]
+    [userId]
   );
 
   type Row = {
@@ -39,8 +38,8 @@ export async function findByUserId(userId: number): Promise<UserPack[]> {
     producto_imagen: string | null;
     lugar_id: number | null;
     lugar_nombre: string | null;
-    compra_id: number | null;
     cantidad: number | null;
+    unidades_compradas: number | null;
   };
 
   const packsMap = new Map<number, UserPack>();
@@ -53,6 +52,8 @@ export async function findByUserId(userId: number): Promise<UserPack[]> {
         usuario_id: r.usuario_id,
         created_at: r.created_at,
         total_productos: 0,
+        total_unidades: 0,
+        unidades_compradas: 0,
         comprados: 0,
         pendientes: 0,
         precio_total: 0,
@@ -60,24 +61,30 @@ export async function findByUserId(userId: number): Promise<UserPack[]> {
       };
       packsMap.set(r.id, pack);
     }
+    pack = packsMap.get(r.id)!;
     if (r.pp_id === null) continue;
+    const cantidad = r.cantidad ?? 1;
+    const unidadesCompradas = r.unidades_compradas ?? 0;
     const producto: PackProducto = {
       id: r.pp_id,
       producto_id: r.producto_id!,
       nombre: r.producto_nombre!,
       precio: Number(r.producto_precio),
-      cantidad: r.cantidad ?? 1,
+      cantidad,
+      unidades_compradas: unidadesCompradas,
       imagen: r.producto_imagen,
       lugar_id: r.lugar_id!,
       lugar_nombre: r.lugar_nombre!,
-      comprado: r.compra_id !== null,
-      compra_id: r.compra_id,
+      comprado: unidadesCompradas >= cantidad,
+      compra_id: null,
     };
     pack.productos.push(producto);
   }
 
   for (const pack of packsMap.values()) {
     pack.total_productos = pack.productos.length;
+    pack.total_unidades = pack.productos.reduce((sum, p) => sum + p.cantidad, 0);
+    pack.unidades_compradas = pack.productos.reduce((sum, p) => sum + p.unidades_compradas, 0);
     pack.comprados = pack.productos.filter((p) => p.comprado).length;
     pack.pendientes = pack.total_productos - pack.comprados;
     pack.precio_total = pack.productos.reduce((sum, p) => sum + Number(p.precio) * p.cantidad, 0);
@@ -146,13 +153,12 @@ export async function removeProduct(
 
 export async function getPendingCount(userId: number): Promise<number> {
   const [rows] = await pool.query(
-    `SELECT COALESCE(SUM(pp.cantidad), 0) AS total
+    `SELECT COALESCE(SUM(pp.cantidad - pp.unidades_compradas), 0) AS total
      FROM paks_productos pp
      JOIN packs pa ON pp.id_pack = pa.id
-     LEFT JOIN compras c ON c.id_producto = pp.id_prod AND c.user_id = ?
      WHERE pa.usuario_id = ?
-       AND c.id IS NULL`,
-    [userId, userId]
+       AND pp.unidades_compradas < pp.cantidad`,
+    [userId]
   );
   return Number((rows as { total: number }[])[0].total);
 }

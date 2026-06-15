@@ -134,6 +134,7 @@ export interface PackProducto {
   nombre: string;
   precio: number;
   cantidad: number;
+  unidades_compradas: number;
   imagen: string | null;
   lugar_id: number;
   lugar_nombre: string;
@@ -147,6 +148,8 @@ export interface UserPack {
   usuario_id: number;
   created_at: string;
   total_productos: number;
+  total_unidades: number;
+  unidades_compradas: number;
   comprados: number;
   pendientes: number;
   precio_total: number;
