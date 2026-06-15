@@ -102,8 +102,7 @@ export function Navbar() {
             </Button>
           </>
         )}
-
-        <SearchBar className="order-3 w-full md:order-2 md:flex-1" />
+        {user && <SearchBar className="order-3 w-full md:order-2 md:flex-1" />}
 
         <div className="order-2 flex w-full items-center justify-evenly gap-1 md:w-auto md:justify-end md:gap-3 md:order-3 md:ml-auto">
           <Link

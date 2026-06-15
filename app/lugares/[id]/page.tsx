@@ -141,7 +141,13 @@ function CoordField({
     </div>
   );
 }
-import type { Producto, Lugar, Presupuesto, CompraConProducto, UserPack } from "@/types";
+import type {
+  Producto,
+  Lugar,
+  Presupuesto,
+  CompraConProducto,
+  UserPack,
+} from "@/types";
 
 export default function LugarDetailPage() {
   const { user } = useAuth();
@@ -156,21 +162,26 @@ export default function LugarDetailPage() {
   const [loading, setLoading] = useState(true);
 
   const [selectedProducto, setSelectedProducto] = useState<Producto | null>(
-    null
+    null,
   );
   const [confirmando, setConfirmando] = useState(false);
   const [compraExitosa, setCompraExitosa] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
   const [search, setSearch] = useState("");
   const [historyProducto, setHistoryProducto] = useState<Producto | null>(null);
-  const [priceEditProducto, setPriceEditProducto] = useState<Producto | null>(null);
+  const [priceEditProducto, setPriceEditProducto] = useState<Producto | null>(
+    null,
+  );
   const [showLocation, setShowLocation] = useState(false);
   const [copiedField, setCopiedField] = useState<"lat" | "lng" | null>(null);
   const [packProducto, setPackProducto] = useState<Producto | null>(null);
   const [packCantidad, setPackCantidad] = useState(1);
   const [userPacks, setUserPacks] = useState<UserPack[]>([]);
   const [addingToPack, setAddingToPack] = useState<Set<number>>(new Set());
-  const [toast, setToast] = useState<{ type: "success" | "error"; msg: string } | null>(null);
+  const [toast, setToast] = useState<{
+    type: "success" | "error";
+    msg: string;
+  } | null>(null);
   const copyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const showToast = useCallback((type: "success" | "error", msg: string) => {
@@ -311,7 +322,10 @@ export default function LugarDetailPage() {
       const res = await fetch(`/api/packs/${packId}/productos`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ producto_id: packProducto.id, cantidad: packCantidad }),
+        body: JSON.stringify({
+          producto_id: packProducto.id,
+          cantidad: packCantidad,
+        }),
       });
       const json = await res.json();
       if (json.success) {
@@ -525,7 +539,7 @@ export default function LugarDetailPage() {
                 </button>
               </div>
             ) : (
-              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
                 {filteredProductos.map((producto) => {
                   const isHighlighted = highlightedProductId === producto.id;
                   return (
@@ -534,80 +548,80 @@ export default function LugarDetailPage() {
                       ref={(el) => {
                         productRefs.current[producto.id] = el;
                       }}
-className={`flex flex-col gap-3 rounded-lg border p-4 transition-all hover:bg-zinc-50 lg:flex-row lg:items-center lg:gap-4 dark:hover:bg-zinc-800/50 ${
-                         isHighlighted
-                           ? "border-amber-400 bg-amber-50 ring-2 ring-amber-300 ring-offset-2 dark:border-amber-500 dark:bg-amber-950/30 dark:ring-amber-500/50"
-                           : "border-zinc-200 dark:border-zinc-700"
-                       }`}
-                     >
-                       <div
-                         className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${
-                           isHighlighted
-                             ? "bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-300"
-                             : "bg-zinc-100 text-zinc-500 dark:bg-zinc-800"
-                         }`}
-                       >
-                         <Package className="h-5 w-5" />
-                       </div>
-                       <div className="min-w-0 flex-1">
-                         <div className="flex items-center gap-1.5">
-                           <span className="truncate font-medium text-zinc-900 dark:text-zinc-100">
-                             {producto.nombre}
-                           </span>
-                           <button
-                             type="button"
-                             onClick={(e) => {
-                               e.stopPropagation();
-                               setHistoryProducto(producto);
-                             }}
-                             aria-label="Ver fluctuación de precio"
-                             title="Ver fluctuación de precio"
-                             className="shrink-0 rounded p-0.5 text-zinc-400 transition-colors hover:bg-zinc-100 hover:text-zinc-700 dark:hover:bg-zinc-800 dark:hover:text-zinc-200"
-                           >
-                             <LineChart className="h-3.5 w-3.5" />
-                           </button>
-                           <button
-                             type="button"
-                             onClick={(e) => {
-                               e.stopPropagation();
-                               setPriceEditProducto(producto);
-                             }}
-                             aria-label="Actualizar precio"
-                             title="Actualizar precio"
-                             className="shrink-0 rounded p-0.5 text-zinc-400 transition-colors hover:bg-zinc-100 hover:text-zinc-700 dark:hover:bg-zinc-800 dark:hover:text-zinc-200"
-                           >
-                             <Pencil className="h-3.5 w-3.5" />
-                           </button>
-                         </div>
-                         <p
-                           className={`text-sm font-semibold ${
-                             isHighlighted
-                               ? "text-amber-700 dark:text-amber-300"
-                               : "text-zinc-600 dark:text-zinc-400"
-                           }`}
-                         >
-                           ${Number(producto.precio).toLocaleString("es-CL")}
-                         </p>
-                       </div>
-                       <div className="flex shrink-0 gap-1.5 lg:self-center">
-                         <Button
-                           onClick={() => abrirPackModal(producto)}
-                           size="sm"
-                           variant="secondary"
-                           className="shrink-0"
-                           aria-label={`Agregar ${producto.nombre} a un pack`}
-                         >
-                           <ListPlus className="h-4 w-4" />
-                         </Button>
-                         <Button
-                           onClick={() => abrirModal(producto)}
-                           size="sm"
-                           className="shrink-0"
-                         >
-                           <ShoppingCart className="mr-1.5 h-4 w-4" />
-                           Comprar
-                         </Button>
-                       </div>
+                      className={`flex flex-col gap-3 rounded-lg border p-4 transition-all hover:bg-zinc-50 lg:flex-row lg:items-center lg:gap-4 dark:hover:bg-zinc-800/50 ${
+                        isHighlighted
+                          ? "border-amber-400 bg-amber-50 ring-2 ring-amber-300 ring-offset-2 dark:border-amber-500 dark:bg-amber-950/30 dark:ring-amber-500/50"
+                          : "border-zinc-200 dark:border-zinc-700"
+                      }`}
+                    >
+                      <div
+                        className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${
+                          isHighlighted
+                            ? "bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-300"
+                            : "bg-zinc-100 text-zinc-500 dark:bg-zinc-800"
+                        }`}
+                      >
+                        <Package className="h-5 w-5" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-1.5">
+                          <span className="truncate font-medium text-zinc-900 dark:text-zinc-100">
+                            {producto.nombre}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setHistoryProducto(producto);
+                            }}
+                            aria-label="Ver fluctuación de precio"
+                            title="Ver fluctuación de precio"
+                            className="shrink-0 rounded p-0.5 text-zinc-400 transition-colors hover:bg-zinc-100 hover:text-zinc-700 dark:hover:bg-zinc-800 dark:hover:text-zinc-200"
+                          >
+                            <LineChart className="h-3.5 w-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setPriceEditProducto(producto);
+                            }}
+                            aria-label="Actualizar precio"
+                            title="Actualizar precio"
+                            className="shrink-0 rounded p-0.5 text-zinc-400 transition-colors hover:bg-zinc-100 hover:text-zinc-700 dark:hover:bg-zinc-800 dark:hover:text-zinc-200"
+                          >
+                            <Pencil className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                        <p
+                          className={`text-sm font-semibold ${
+                            isHighlighted
+                              ? "text-amber-700 dark:text-amber-300"
+                              : "text-zinc-600 dark:text-zinc-400"
+                          }`}
+                        >
+                          ${Number(producto.precio).toLocaleString("es-CL")}
+                        </p>
+                      </div>
+                      <div className="flex shrink-0 gap-1.5 lg:self-center">
+                        <Button
+                          onClick={() => abrirPackModal(producto)}
+                          size="sm"
+                          variant="secondary"
+                          className="shrink-0"
+                          aria-label={`Agregar ${producto.nombre} a un pack`}
+                        >
+                          <ListPlus className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          onClick={() => abrirModal(producto)}
+                          size="sm"
+                          className="shrink-0"
+                        >
+                          <ShoppingCart className="mr-1.5 h-4 w-4" />
+                          Comprar
+                        </Button>
+                      </div>
                     </div>
                   );
                 })}
@@ -863,10 +877,7 @@ className={`flex flex-col gap-3 rounded-lg border p-4 transition-all hover:bg-zi
         )}
       </Modal>
 
-      <Modal
-        open={!!historyProducto}
-        onClose={() => setHistoryProducto(null)}
-      >
+      <Modal open={!!historyProducto} onClose={() => setHistoryProducto(null)}>
         {historyProducto && (
           <div className="flex flex-col gap-4">
             <div className="flex items-center justify-between">
@@ -875,7 +886,8 @@ className={`flex flex-col gap-3 rounded-lg border p-4 transition-all hover:bg-zi
                   {historyProducto.nombre}
                 </h3>
                 <p className="text-xs text-zinc-500">
-                  Evolución del precio basada en todos los registros con este nombre
+                  Evolución del precio basada en todos los registros con este
+                  nombre
                 </p>
               </div>
               <button
@@ -903,9 +915,13 @@ className={`flex flex-col gap-3 rounded-lg border p-4 transition-all hover:bg-zi
           setProductos((prev) =>
             prev.map((p) =>
               p.id === priceEditProducto?.id
-                ? { ...p, precio: nuevoPrecio, fech_act_precio: new Date().toISOString() }
-                : p
-            )
+                ? {
+                    ...p,
+                    precio: nuevoPrecio,
+                    fech_act_precio: new Date().toISOString(),
+                  }
+                : p,
+            ),
           );
         }}
       />
@@ -923,7 +939,8 @@ className={`flex flex-col gap-3 rounded-lg border p-4 transition-all hover:bg-zi
                     Agregar a pack
                   </h3>
                   <p className="text-xs text-zinc-500 dark:text-zinc-400">
-                    {packProducto.nombre} — ${Number(packProducto.precio).toLocaleString("es-CL")} c/u
+                    {packProducto.nombre} — $
+                    {Number(packProducto.precio).toLocaleString("es-CL")} c/u
                   </p>
                 </div>
               </div>
@@ -971,7 +988,10 @@ className={`flex flex-col gap-3 rounded-lg border p-4 transition-all hover:bg-zi
             </div>
             {packCantidad > 1 && (
               <p className="text-xs text-right font-medium text-violet-600 dark:text-violet-400">
-                Subtotal: ${(Number(packProducto.precio) * packCantidad).toLocaleString("es-CL")}
+                Subtotal: $
+                {(Number(packProducto.precio) * packCantidad).toLocaleString(
+                  "es-CL",
+                )}
               </p>
             )}
 
@@ -1003,7 +1023,8 @@ className={`flex flex-col gap-3 rounded-lg border p-4 transition-all hover:bg-zi
                         {pack.nombre}
                       </p>
                       <p className="text-[10px] text-zinc-500 dark:text-zinc-400">
-                        {pack.pendientes} pendientes · {pack.total_productos} productos
+                        {pack.pendientes} pendientes · {pack.total_productos}{" "}
+                        productos
                       </p>
                     </div>
                     {addingToPack.has(pack.id) ? (

@@ -583,7 +583,10 @@ export default function PerfilPage() {
 
   const usoPct =
     totalPresupuestoInicial > 0
-      ? Math.min(100, Math.round((totalGastado / totalPresupuestoInicial) * 100))
+      ? Math.min(
+          100,
+          Math.round((totalGastado / totalPresupuestoInicial) * 100),
+        )
       : 0;
   const usoColor =
     usoPct < 50
@@ -880,7 +883,8 @@ export default function PerfilPage() {
                   {usoPct}%
                 </p>
                 <p className="text-xs text-zinc-500 dark:text-zinc-400">
-                  {formatCLP(totalGastado)} de {formatCLP(totalPresupuestoInicial)}
+                  {formatCLP(totalGastado)} de{" "}
+                  {formatCLP(totalPresupuestoInicial)}
                 </p>
               </div>
             </div>
@@ -1258,7 +1262,10 @@ export default function PerfilPage() {
                                   </span>
                                 )}
                                 <span className="shrink-0 text-[11px] font-medium tabular-nums text-zinc-500 dark:text-zinc-400">
-                                  ${(Number(prod.precio) * prod.cantidad).toLocaleString("es-CL")}
+                                  $
+                                  {(
+                                    Number(prod.precio) * prod.cantidad
+                                  ).toLocaleString("es-CL")}
                                 </span>
                                 <span className="hidden truncate text-[10px] text-zinc-400 sm:inline dark:text-zinc-500">
                                   {prod.lugar_nombre}
