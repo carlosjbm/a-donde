@@ -899,10 +899,15 @@ export default function AdminPage() {
                         <p className="truncate text-sm font-medium text-zinc-900 dark:text-zinc-100">
                           {l.nombre}
                         </p>
-                        {l.transferencia && (
+                        {l.transferencia ? (
                           <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-sky-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-sky-700 dark:bg-sky-950/50 dark:text-sky-300">
                             <CreditCard className="h-3 w-3" />
                             Pago elec.
+                          </span>
+                        ) : (
+                          <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300">
+                            <DollarSign className="h-3 w-3" />
+                            Solo efectivo
                           </span>
                         )}
                       </div>

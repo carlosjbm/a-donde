@@ -1230,7 +1230,7 @@ export default function PerfilPage() {
                               return (
                               <div
                                 key={prod.id}
-                                className={`flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 ${
+                                className={`group/producto flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 ${
                                   prod.comprado
                                     ? "bg-zinc-50 dark:bg-zinc-800/40"
                                     : "bg-white dark:bg-zinc-900/60"
@@ -1286,6 +1286,68 @@ export default function PerfilPage() {
                                 <span className="hidden truncate text-[10px] text-zinc-400 sm:inline dark:text-zinc-500">
                                   {prod.lugar_nombre}
                                 </span>
+                                <button
+                                  type="button"
+                                  onClick={async () => {
+                                    if (!confirm(`¿Eliminar "${prod.nombre}" de este pack?`)) return;
+                                    try {
+                                      const res = await fetch(
+                                        `/api/packs/${pack.id}/productos/${prod.producto_id}`,
+                                        { method: "DELETE" },
+                                      );
+                                      const json = await res.json();
+                                      if (json.success) {
+                                        setPacks((prev) =>
+                                          prev.map((p) =>
+                                            p.id === pack.id
+                                              ? {
+                                                  ...p,
+                                                  productos: p.productos.filter(
+                                                    (pp) => pp.id !== prod.id,
+                                                  ),
+                                                  total_productos:
+                                                    p.total_productos - 1,
+                                                  total_unidades:
+                                                    p.total_unidades -
+                                                    prod.cantidad,
+                                                  precio_total:
+                                                    p.precio_total -
+                                                    Number(prod.precio) *
+                                                      prod.cantidad,
+                                                  pendientes:
+                                                    p.pendientes -
+                                                    (prod.comprado
+                                                      ? 0
+                                                      : prod.cantidad -
+                                                        prod.unidades_compradas),
+                                                  unidades_compradas:
+                                                    prod.unidades_compradas > 0
+                                                      ? p.unidades_compradas -
+                                                        prod.unidades_compradas
+                                                      : p.unidades_compradas,
+                                                }
+                                              : p,
+                                          ),
+                                        );
+                                        showToast(
+                                          "success",
+                                          `"${prod.nombre}" eliminado del pack`,
+                                        );
+                                      } else {
+                                        showToast("error", json.error);
+                                      }
+                                    } catch {
+                                      showToast(
+                                        "error",
+                                        "Error al eliminar producto",
+                                      );
+                                    }
+                                  }}
+                                  className="shrink-0 rounded-md p-1 text-zinc-400 transition-all hover:bg-zinc-100 hover:text-rose-600 sm:opacity-0 sm:group-hover/producto:opacity-100 dark:hover:bg-zinc-800 dark:hover:text-rose-400"
+                                  aria-label={`Eliminar ${prod.nombre} del pack`}
+                                >
+                                  <X className="h-3 w-3" />
+                                </button>
                               </div>
                               );
                             })}
