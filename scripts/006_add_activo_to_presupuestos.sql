@@ -1,0 +1,1 @@
+ALTER TABLE presupuestos ADD COLUMN activo BOOLEAN NOT NULL DEFAULT TRUE AFTER valor_inicial;

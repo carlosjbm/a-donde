@@ -31,7 +31,8 @@ export function Navbar() {
       ]);
       if (presJson.success) {
         const total = presJson.data.reduce(
-          (s: number, p: { valor: number }) => s + Number(p.valor),
+          (s: number, p: { valor: number; activo: boolean }) =>
+            s + (p.activo !== false ? Number(p.valor) : 0),
           0,
         );
         setPresupuestoTotal(total);

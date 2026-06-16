@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Card } from "@/components/ui/card";
+import { StarRating } from "@/components/star-rating";
 import { Store, MapPin, CreditCard } from "lucide-react";
 import type { Lugar } from "@/types";
 
@@ -72,6 +73,11 @@ export default function LugaresPage() {
                       <p className="mt-0.5 text-sm text-zinc-500 line-clamp-2">
                         {lugar.descripcion}
                       </p>
+                    )}
+                    {lugar.estrellas != null && (
+                      <div className="mt-1">
+                        <StarRating value={lugar.estrellas} size="sm" />
+                      </div>
                     )}
                     <p className="mt-1.5 flex items-center gap-1 text-xs text-zinc-400">
                       <MapPin className="h-3 w-3" />

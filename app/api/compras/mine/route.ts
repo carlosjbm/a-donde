@@ -22,7 +22,7 @@ export async function POST(request: NextRequest) {
     if (!userId) return errorResponse("No autenticado", 401);
 
     const body = await request.json();
-    const { id_producto, observacion, id_pack } = body;
+    const { id_producto, observacion, id_pack, cantidad } = body;
 
     if (!id_producto) {
       return errorResponse("id_producto es requerido", 400);
@@ -32,6 +32,7 @@ export async function POST(request: NextRequest) {
       id_producto: Number(id_producto),
       user_id: Number(userId),
       observacion: observacion || "",
+      cantidad: cantidad ? Number(cantidad) : 1,
     });
 
     if (id_pack) {

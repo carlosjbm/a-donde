@@ -1,24 +1,52 @@
 import pool from "@/lib/db";
 import { Lugar } from "@/types";
 
+const COLUMNS = "id, nombre, descripcion, direccion, latitud, longitud, transferencia, estrellas, created_at, updated_at";
+
 export async function findAll(): Promise<Lugar[]> {
   const [rows] = await pool.query(
-    "SELECT id, nombre, descripcion, direccion, latitud, longitud, transferencia, created_at, updated_at FROM lugares"
+    `SELECT ${COLUMNS} FROM lugares`
   );
   return rows as Lugar[];
 }
 
 export async function findById(id: number): Promise<Lugar | null> {
   const [rows] = await pool.query(
-    "SELECT id, nombre, descripcion, direccion, latitud, longitud, transferencia, created_at, updated_at FROM lugares WHERE id = ?",
+    `SELECT ${COLUMNS} FROM lugares WHERE id = ?`,
     [id]
   );
   const result = (rows as Lugar[])[0];
   return result || null;
 }
 
+export async function rate(
+  lugarId: number,
+  userId: number,
+  estrellas: number
+): Promise<Lugar | null> {
+  await pool.query(
+    `INSERT INTO valoraciones (id_lugar, user_id, estrellas, created_at)
+     VALUES (?, ?, ?, NOW())
+     ON DUPLICATE KEY UPDATE estrellas = VALUES(estrellas), created_at = NOW()`,
+    [lugarId, userId, estrellas]
+  );
+
+  const [avgRows] = await pool.query(
+    "SELECT ROUND(AVG(estrellas)) as promedio FROM valoraciones WHERE id_lugar = ?",
+    [lugarId]
+  );
+  const promedio = (avgRows as { promedio: number | null }[])[0].promedio;
+
+  await pool.query(
+    "UPDATE lugares SET estrellas = ? WHERE id = ?",
+    [promedio, lugarId]
+  );
+
+  return findById(lugarId);
+}
+
 export async function create(
-  data: Omit<Lugar, "id" | "created_at" | "updated_at">
+  data: Omit<Lugar, "id" | "created_at" | "updated_at" | "estrellas">
 ): Promise<Lugar> {
   const [result] = await pool.query(
     "INSERT INTO lugares (nombre, descripcion, direccion, latitud, longitud, transferencia) VALUES (?, ?, ?, ?, ?, ?)",
@@ -75,6 +103,18 @@ export async function update(
     values
   );
   return findById(id);
+}
+
+export async function getUserRating(
+  lugarId: number,
+  userId: number
+): Promise<number | null> {
+  const [rows] = await pool.query(
+    "SELECT estrellas FROM valoraciones WHERE id_lugar = ? AND user_id = ?",
+    [lugarId, userId]
+  );
+  const row = (rows as { estrellas: number }[])[0];
+  return row ? row.estrellas : null;
 }
 
 export async function remove(id: number): Promise<boolean> {

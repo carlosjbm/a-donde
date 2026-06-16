@@ -23,6 +23,14 @@ export async function findByUserId(userId: number): Promise<Presupuesto[]> {
   return rows as Presupuesto[];
 }
 
+export async function findActiveByUserId(userId: number): Promise<Presupuesto[]> {
+  const [rows] = await pool.query(
+    "SELECT * FROM presupuestos WHERE user_id = ? AND activo = TRUE",
+    [userId]
+  );
+  return rows as Presupuesto[];
+}
+
 export async function create(
   data: Pick<Presupuesto, "descripcion" | "user_id"> & { valor: number }
 ): Promise<Presupuesto> {
@@ -58,6 +66,18 @@ export async function update(
     values
   );
   return findById(id);
+}
+
+export async function deactivate(id: number): Promise<Presupuesto | null> {
+  await pool.query("UPDATE presupuestos SET activo = FALSE WHERE id = ?", [id]);
+  return findById(id);
+}
+
+export async function deactivateExpired(): Promise<number> {
+  const [result] = await pool.query(
+    "UPDATE presupuestos SET activo = FALSE WHERE activo = TRUE AND created_date < DATE_SUB(NOW(), INTERVAL 1 MONTH)"
+  );
+  return (result as { affectedRows: number }).affectedRows;
 }
 
 export async function remove(id: number): Promise<boolean> {

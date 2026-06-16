@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Modal } from "@/components/ui/modal";
 import { PriceHistoryChart } from "@/components/productos/price-history-chart";
 import { UpdatePriceModal } from "@/components/productos/update-price-modal";
+import { StarRating } from "@/components/star-rating";
 import {
   Store,
   MapPin,
@@ -167,6 +168,7 @@ export default function LugarDetailPage() {
   const [confirmando, setConfirmando] = useState(false);
   const [compraExitosa, setCompraExitosa] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
+  const [compraCantidad, setCompraCantidad] = useState(1);
   const [search, setSearch] = useState("");
   const [historyProducto, setHistoryProducto] = useState<Producto | null>(null);
   const [priceEditProducto, setPriceEditProducto] = useState<Producto | null>(
@@ -182,12 +184,43 @@ export default function LugarDetailPage() {
     type: "success" | "error";
     msg: string;
   } | null>(null);
+  const [userRating, setUserRating] = useState<number | null>(null);
+  const [ratingLoading, setRatingLoading] = useState(false);
   const copyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const showToast = useCallback((type: "success" | "error", msg: string) => {
     setToast({ type, msg });
     window.setTimeout(() => setToast(null), 2400);
   }, []);
+
+  const lugarRef = useRef(lugar);
+  lugarRef.current = lugar;
+
+  const handleRate = useCallback(async (estrellas: number) => {
+    if (!user) return;
+    setRatingLoading(true);
+    setUserRating(estrellas);
+    try {
+      const res = await fetch(`/api/lugares/${lugarRef.current!.id}/rate`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ estrellas }),
+      });
+      const json = await res.json();
+      if (json.success) {
+        setLugar(json.data);
+        showToast("success", "Valoración guardada");
+      } else {
+        setUserRating(null);
+        showToast("error", json.error);
+      }
+    } catch {
+      setUserRating(null);
+      showToast("error", "Error al valorar");
+    } finally {
+      setRatingLoading(false);
+    }
+  }, [user, showToast]);
 
   const highlightedProductId = Number(searchParams.get("producto")) || null;
   const productRefs = useRef<Record<number, HTMLDivElement | null>>({});
@@ -251,6 +284,16 @@ export default function LugarDetailPage() {
   }, [user]);
 
   useEffect(() => {
+    if (!user || !lugar) return;
+    fetch(`/api/lugares/${lugar.id}/rate`)
+      .then((r) => r.json())
+      .then((json) => {
+        if (json.success) setUserRating(json.data.estrellas);
+      })
+      .catch(() => {});
+  }, [user, lugar]);
+
+  useEffect(() => {
     if (loading || productos.length === 0) return;
 
     const productoId = Number(searchParams.get("producto"));
@@ -282,10 +325,9 @@ export default function LugarDetailPage() {
     }
   }, [loading, productos, searchParams, user, router, params.id]);
 
-  const totalPresupuesto = presupuestos.reduce(
-    (s, p) => s + Number(p.valor),
-    0,
-  );
+  const totalPresupuesto = presupuestos
+    .filter((p) => p.activo !== false)
+    .reduce((s, p) => s + Number(p.valor), 0);
 
   function abrirModal(producto: Producto) {
     if (!user) {
@@ -295,6 +337,7 @@ export default function LugarDetailPage() {
     setSelectedProducto(producto);
     setCompraExitosa(false);
     setErrorMsg("");
+    setCompraCantidad(1);
     setShowLocation(false);
     setCopiedField(null);
   }
@@ -358,6 +401,7 @@ export default function LugarDetailPage() {
         body: JSON.stringify({
           id_producto: selectedProducto.id,
           observacion: "",
+          cantidad: compraCantidad,
         }),
       });
       const json = await res.json();
@@ -442,10 +486,9 @@ export default function LugarDetailPage() {
   }
 
   const gastado = compras.reduce((s, c) => s + Number(c.producto_precio), 0);
-  const totalPresupuestoInicial = presupuestos.reduce(
-    (s, p) => s + Number(p.valor_inicial),
-    0,
-  );
+  const totalPresupuestoInicial = presupuestos
+    .filter((p) => p.activo !== false)
+    .reduce((s, p) => s + Number(p.valor_inicial), 0);
   const disponible = totalPresupuesto;
 
   const normalize = (s: string) =>
@@ -488,6 +531,35 @@ export default function LugarDetailPage() {
             <MapPin className="h-3.5 w-3.5" />
             {lugar.direccion}
           </p>
+          <div className="mt-2 flex items-center gap-2">
+            {lugar.estrellas != null && (
+              <div className="flex items-center gap-1">
+                <StarRating value={lugar.estrellas} size="sm" />
+                <span className="text-[11px] font-medium text-zinc-500 dark:text-zinc-400">
+                  {lugar.estrellas}
+                </span>
+              </div>
+            )}
+            {user && (
+              <div className="flex items-center gap-1.5">
+                <span className="text-[10px] text-zinc-400 dark:text-zinc-500">
+                  |
+                </span>
+                <span className="text-[10px] font-medium text-zinc-500 dark:text-zinc-400">
+                  Tu voto:
+                </span>
+                <StarRating
+                  value={userRating}
+                  size="sm"
+                  interactive
+                  onChange={handleRate}
+                />
+                {ratingLoading && (
+                  <span className="h-3 w-3 animate-spin rounded-full border-2 border-zinc-300 border-t-emerald-500" />
+                )}
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
@@ -695,6 +767,51 @@ export default function LugarDetailPage() {
               </div>
             </div>
 
+            <div className="flex items-center gap-3 rounded-lg border border-zinc-200/70 bg-zinc-50 px-3 py-2.5 dark:border-zinc-800/60 dark:bg-zinc-900/40">
+              <label className="text-xs font-medium text-zinc-600 dark:text-zinc-400">
+                Cantidad
+              </label>
+              <div className="ml-auto flex items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => setCompraCantidad((q) => Math.max(1, q - 1))}
+                  className="flex h-7 w-7 items-center justify-center rounded-md border border-zinc-200 bg-white text-zinc-600 transition-colors hover:bg-zinc-100 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700"
+                >
+                  −
+                </button>
+                <input
+                  type="number"
+                  min={1}
+                  max={999}
+                  value={compraCantidad}
+                  onChange={(e) => {
+                    const v = parseInt(e.target.value, 10);
+                    if (!isNaN(v) && v >= 1 && v <= 999)
+                      setCompraCantidad(v);
+                  }}
+                  className="h-7 w-12 rounded-md border border-zinc-200 bg-white text-center text-sm font-medium tabular-nums text-zinc-900 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100 [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                />
+                <button
+                  type="button"
+                  onClick={() =>
+                    setCompraCantidad((q) => Math.min(999, q + 1))
+                  }
+                  className="flex h-7 w-7 items-center justify-center rounded-md border border-zinc-200 bg-white text-zinc-600 transition-colors hover:bg-zinc-100 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700"
+                >
+                  +
+                </button>
+              </div>
+            </div>
+
+            {compraCantidad > 1 && (
+              <p className="-mt-2 text-right text-xs font-medium text-violet-600 dark:text-violet-400">
+                Subtotal: $
+                {(
+                  Number(selectedProducto.precio) * compraCantidad
+                ).toLocaleString("es-CL")}
+              </p>
+            )}
+
             <div className="rounded-lg border border-zinc-200 dark:border-zinc-700">
               <button
                 type="button"
@@ -795,9 +912,14 @@ export default function LugarDetailPage() {
                 </span>
               </div>
               <div className="flex justify-between text-sm">
-                <span className="text-zinc-500">Valor del producto</span>
+                <span className="text-zinc-500">
+                  Valor {compraCantidad > 1 && `(×${compraCantidad})`}
+                </span>
                 <span className="font-medium text-red-500">
-                  -${Number(selectedProducto.precio).toLocaleString("es-CL")}
+                  -$
+                  {(
+                    Number(selectedProducto.precio) * compraCantidad
+                  ).toLocaleString("es-CL")}
                 </span>
               </div>
               <hr className="border-zinc-300 dark:border-zinc-600" />
@@ -807,14 +929,17 @@ export default function LugarDetailPage() {
                 </span>
                 <span
                   className={
-                    disponible - Number(selectedProducto.precio) >= 0
+                    disponible -
+                      Number(selectedProducto.precio) * compraCantidad >=
+                    0
                       ? "text-green-600"
                       : "text-red-500"
                   }
                 >
                   $
                   {(
-                    disponible - Number(selectedProducto.precio)
+                    disponible -
+                    Number(selectedProducto.precio) * compraCantidad
                   ).toLocaleString("es-CL")}
                 </span>
               </div>
@@ -857,8 +982,11 @@ export default function LugarDetailPage() {
                 ¡Compra realizada!
               </h3>
               <p className="mt-1 text-sm text-zinc-500">
-                {selectedProducto.nombre} — $
-                {Number(selectedProducto.precio).toLocaleString("es-CL")}
+                {selectedProducto.nombre}
+                {compraCantidad > 1 ? ` ×${compraCantidad}` : ""} — $
+                {(
+                  Number(selectedProducto.precio) * compraCantidad
+                ).toLocaleString("es-CL")}
               </p>
             </div>
             <div className="flex items-center gap-2 rounded-lg bg-green-50 px-4 py-2 dark:bg-green-950">

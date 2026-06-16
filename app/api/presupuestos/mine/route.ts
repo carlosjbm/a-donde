@@ -7,6 +7,8 @@ export async function GET(request: NextRequest) {
     const userId = request.headers.get("x-user-id");
     if (!userId) return errorResponse("No autenticado", 401);
 
+    await presupuestoModel.deactivateExpired();
+
     const presupuestos = await presupuestoModel.findByUserId(Number(userId));
     return successResponse(presupuestos);
   } catch (error) {

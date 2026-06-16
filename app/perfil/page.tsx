@@ -212,35 +212,83 @@ function KpiCard({
 function BudgetItem({
   presupuesto,
   isPrimary,
+  onDeactivate,
 }: {
   presupuesto: Presupuesto;
   isPrimary: boolean;
+  onDeactivate?: () => void;
 }) {
   const valor = Number(presupuesto.valor);
   const valorInicial = Number(presupuesto.valor_inicial);
+  const activo = presupuesto.activo;
+
+  const daysRemaining = activo
+    ? Math.max(
+        0,
+        30 -
+          Math.floor(
+            (Date.now() - new Date(presupuesto.created_date).getTime()) /
+              (1000 * 60 * 60 * 24),
+          ),
+      )
+    : 0;
+
+  const dayColor =
+    daysRemaining > 7
+      ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300"
+      : daysRemaining > 3
+        ? "bg-amber-100 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300"
+        : "bg-rose-100 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300";
+
   return (
     <div
-      className="group relative overflow-hidden rounded-xl border border-zinc-200/70 bg-white p-3.5 transition-all duration-200 hover:-translate-y-px hover:border-zinc-300 hover:shadow-sm dark:border-zinc-800/60 dark:bg-zinc-900/40 dark:hover:border-zinc-700"
+      className={`group relative overflow-hidden rounded-xl border p-3.5 transition-all duration-200 ${
+        activo
+          ? "border-zinc-200/70 bg-white hover:-translate-y-px hover:border-zinc-300 hover:shadow-sm dark:border-zinc-800/60 dark:bg-zinc-900/40 dark:hover:border-zinc-700"
+          : "border-zinc-200/40 bg-zinc-50/60 dark:border-zinc-800/30 dark:bg-zinc-900/20"
+      }`}
       style={{ animation: "fadeInUp 0.4s ease both" }}
     >
       <div className="flex items-center gap-3">
         <div
           className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg transition-transform duration-200 group-hover:scale-110 group-hover:rotate-3 ${
-            isPrimary
-              ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300"
-              : "bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400"
+            activo
+              ? isPrimary
+                ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300"
+                : "bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400"
+              : "bg-zinc-100 text-zinc-400 dark:bg-zinc-800 dark:text-zinc-500"
           }`}
         >
           <Wallet className="h-4.5 w-4.5" />
         </div>
         <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-1.5">
-            <p className="truncate text-sm font-semibold text-zinc-900 dark:text-zinc-100">
+          <div className="flex flex-wrap items-center gap-1.5">
+            <p
+              className={`truncate text-sm font-semibold ${
+                activo
+                  ? "text-zinc-900 dark:text-zinc-100"
+                  : "text-zinc-500 dark:text-zinc-400"
+              }`}
+            >
               {presupuesto.descripcion}
             </p>
-            {isPrimary && (
-              <span className="shrink-0 inline-flex items-center gap-1 rounded-md bg-emerald-100 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300">
+            {activo && isPrimary && (
+              <span className="inline-flex items-center gap-1 rounded-md bg-emerald-100 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300">
                 Activo
+              </span>
+            )}
+            {!activo && (
+              <span className="inline-flex items-center gap-1 rounded-md bg-zinc-200 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-zinc-600 dark:bg-zinc-700 dark:text-zinc-400">
+                Inactivo
+              </span>
+            )}
+            {activo && (
+              <span
+                className={`inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[9px] font-bold tabular-nums ${dayColor}`}
+              >
+                {daysRemaining === 0
+                  ? "Vence hoy"
+                  : `${daysRemaining} ${daysRemaining === 1 ? "día" : "días"}`}
               </span>
             )}
           </div>
@@ -249,7 +297,13 @@ function BudgetItem({
           </p>
         </div>
         <div className="shrink-0 text-right">
-          <p className="text-sm font-bold tabular-nums text-zinc-900 dark:text-zinc-100">
+          <p
+            className={`text-sm font-bold tabular-nums ${
+              activo
+                ? "text-zinc-900 dark:text-zinc-100"
+                : "text-zinc-400 line-through dark:text-zinc-500"
+            }`}
+          >
             {formatCLP(valor)}
           </p>
           {valorInicial !== valor && (
@@ -257,20 +311,43 @@ function BudgetItem({
               Original: {formatCLP(valorInicial)}
             </span>
           )}
+          {activo && onDeactivate && (
+            <button
+              type="button"
+              onClick={onDeactivate}
+              className="mt-1.5 inline-flex items-center gap-1 rounded-md border border-zinc-200 px-2 py-1 text-[9px] font-medium text-zinc-500 transition-colors hover:bg-rose-50 hover:text-rose-600 hover:border-rose-200 dark:border-zinc-700 dark:text-zinc-400 dark:hover:bg-rose-950/30 dark:hover:text-rose-400 dark:hover:border-rose-800"
+              title="Desactivar presupuesto"
+            >
+              Desactivar
+            </button>
+          )}
         </div>
       </div>
     </div>
   );
 }
 
+type GroupedCompra = {
+  ids: number[];
+  id_producto: number;
+  producto_nombre: string;
+  producto_precio: string;
+  total_precio: number;
+  cantidad: number;
+  agotado: boolean;
+  create_at: string;
+};
+
 function PurchaseCard({
   compra,
   isPending,
   onToggle,
+  count,
 }: {
   compra: CompraConProducto;
   isPending: boolean;
   onToggle: (next: boolean) => void;
+  count?: number;
 }) {
   const agotado = compra.agotado;
 
@@ -309,6 +386,11 @@ function PurchaseCard({
             >
               {compra.producto_nombre}
             </p>
+            {count && count > 1 && (
+              <span className="inline-flex items-center gap-1 rounded-full bg-zinc-100 px-1.5 py-0.5 text-[10px] font-bold tabular-nums text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400">
+                ×{count}
+              </span>
+            )}
             <span
               className={`shrink-0 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${
                 agotado
@@ -346,15 +428,24 @@ function PurchaseCard({
           </p>
 
           <div className="mt-3 flex items-center justify-between gap-3 sm:hidden">
-            <p
-              className={`text-base font-bold tabular-nums ${
-                agotado
-                  ? "text-zinc-400 line-through dark:text-zinc-500"
-                  : "text-zinc-900 dark:text-zinc-100"
-              }`}
-            >
-              {formatCLP(Number(compra.producto_precio))}
-            </p>
+            <div>
+              <p
+                className={`text-base font-bold tabular-nums ${
+                  agotado
+                    ? "text-zinc-400 line-through dark:text-zinc-500"
+                    : "text-zinc-900 dark:text-zinc-100"
+                }`}
+              >
+                {count && count > 1
+                  ? formatCLP(Number(compra.producto_precio) * count)
+                  : formatCLP(Number(compra.producto_precio))}
+              </p>
+              {count && count > 1 && (
+                <p className="text-[10px] text-zinc-400">
+                  {formatCLP(Number(compra.producto_precio))} c/u
+                </p>
+              )}
+            </div>
             <Switch
               id={`switch-m-${compra.id}`}
               checked={agotado}
@@ -366,15 +457,24 @@ function PurchaseCard({
         </div>
 
         <div className="hidden shrink-0 flex-col items-end gap-2 sm:flex">
-          <p
-            className={`text-base font-bold tabular-nums ${
-              agotado
-                ? "text-zinc-400 line-through dark:text-zinc-500"
-                : "text-zinc-900 dark:text-zinc-100"
-            }`}
-          >
-            {formatCLP(Number(compra.producto_precio))}
-          </p>
+          <div className="text-right">
+            <p
+              className={`text-base font-bold tabular-nums ${
+                agotado
+                  ? "text-zinc-400 line-through dark:text-zinc-500"
+                  : "text-zinc-900 dark:text-zinc-100"
+              }`}
+            >
+              {count && count > 1
+                ? formatCLP(Number(compra.producto_precio) * count)
+                : formatCLP(Number(compra.producto_precio))}
+            </p>
+            {count && count > 1 && (
+              <p className="text-[10px] text-zinc-400">
+                {formatCLP(Number(compra.producto_precio))} c/u
+              </p>
+            )}
+          </div>
           <Switch
             id={`switch-${compra.id}`}
             checked={agotado}
@@ -534,6 +634,7 @@ export default function PerfilPage() {
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState("");
   const [showForm, setShowForm] = useState(false);
+  const [deactivatingPresupuesto, setDeactivatingPresupuesto] = useState<number | null>(null);
   const [showNewPackForm, setShowNewPackForm] = useState(false);
   const [newPackName, setNewPackName] = useState("");
   const [creatingPack, setCreatingPack] = useState(false);
@@ -564,11 +665,12 @@ export default function PerfilPage() {
       .finally(() => setLoadingData(false));
   }, [user]);
 
-  const totalPresupuesto = presupuestos.reduce(
+  const presupuestosActivos = presupuestos.filter((p) => p.activo);
+  const totalPresupuesto = presupuestosActivos.reduce(
     (sum, p) => sum + Number(p.valor),
     0,
   );
-  const totalPresupuestoInicial = presupuestos.reduce(
+  const totalPresupuestoInicial = presupuestosActivos.reduce(
     (sum, p) => sum + Number(p.valor_inicial),
     0,
   );
@@ -701,6 +803,32 @@ export default function PerfilPage() {
       setError("Error al crear presupuesto");
     } finally {
       setCreating(false);
+    }
+  }
+
+  async function handleDeactivatePresupuesto(p: Presupuesto) {
+    if (!confirm(`¿Desactivar el presupuesto "${p.descripcion}"?`)) return;
+    setDeactivatingPresupuesto(p.id);
+    try {
+      const res = await fetch(`/api/presupuestos/${p.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ activo: false }),
+      });
+      const json = await res.json();
+      if (json.success) {
+        setPresupuestos((prev) =>
+          prev.map((pp) => (pp.id === p.id ? { ...pp, activo: false } : pp)),
+        );
+        window.dispatchEvent(new CustomEvent("budget-update"));
+        showToast("success", `Presupuesto "${p.descripcion}" desactivado`);
+      } else {
+        showToast("error", json.error);
+      }
+    } catch {
+      showToast("error", "Error al desactivar presupuesto");
+    } finally {
+      setDeactivatingPresupuesto(null);
     }
   }
 
@@ -958,7 +1086,9 @@ export default function PerfilPage() {
                 </div>
               ) : (
                 <div className="space-y-2">
-                  {presupuestos.map((p, i) => (
+                  {[...presupuestos]
+                    .sort((a, b) => (a.activo === b.activo ? 0 : a.activo ? -1 : 1))
+                    .map((p, i) => (
                     <div
                       key={p.id}
                       style={{
@@ -969,10 +1099,17 @@ export default function PerfilPage() {
                       <BudgetItem
                         presupuesto={p}
                         isPrimary={
+                          p.activo &&
                           Number(p.valor) ===
-                          Math.max(
-                            ...presupuestos.map((pp) => Number(pp.valor)),
-                          )
+                            Math.max(
+                              ...presupuestosActivos.map((pp) => Number(pp.valor)),
+                              0,
+                            )
+                        }
+                        onDeactivate={
+                          p.activo
+                            ? () => handleDeactivatePresupuesto(p)
+                            : undefined
                         }
                       />
                     </div>
@@ -1494,21 +1631,41 @@ export default function PerfilPage() {
               </div>
             ) : (
               <ul className="space-y-2.5">
-                {filteredCompras.map((c, i) => (
-                  <div
-                    key={c.id}
-                    style={{
-                      animation: "fadeInUp 0.4s ease both",
-                      animationDelay: `${i * 40}ms`,
-                    }}
-                  >
-                    <PurchaseCard
-                      compra={c}
-                      isPending={pendingAgotado.has(c.id)}
-                      onToggle={(next) => toggleAgotado(c, next)}
-                    />
-                  </div>
-                ))}
+                {(() => {
+                  const groups: { items: CompraConProducto[] }[] = [];
+                  for (const c of filteredCompras) {
+                    const last = groups[groups.length - 1];
+                    if (
+                      last &&
+                      last.items[0].id_producto === c.id_producto &&
+                      last.items[0].agotado === c.agotado
+                    ) {
+                      last.items.push(c);
+                    } else {
+                      groups.push({ items: [c] });
+                    }
+                  }
+                  return groups.map((group, i) => (
+                    <div
+                      key={group.items[0].id}
+                      style={{
+                        animation: "fadeInUp 0.4s ease both",
+                        animationDelay: `${i * 40}ms`,
+                      }}
+                    >
+                      <PurchaseCard
+                        compra={group.items[0]}
+                        count={group.items.length}
+                        isPending={group.items.some((c) =>
+                          pendingAgotado.has(c.id),
+                        )}
+                        onToggle={(next) => {
+                          group.items.forEach((c) => toggleAgotado(c, next));
+                        }}
+                      />
+                    </div>
+                  ));
+                })()}
               </ul>
             )}
           </div>

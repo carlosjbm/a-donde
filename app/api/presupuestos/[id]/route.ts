@@ -33,6 +33,27 @@ export async function PUT(
   }
 }
 
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params;
+    const body = await request.json();
+    if (body.activo === false) {
+      const presupuesto = await presupuestoModel.deactivate(Number(id));
+      if (!presupuesto) return errorResponse("Presupuesto no encontrado", 404);
+      return successResponse(presupuesto);
+    }
+    const presupuesto = await presupuestoModel.update(Number(id), body);
+    if (!presupuesto) return errorResponse("Presupuesto no encontrado", 404);
+    return successResponse(presupuesto);
+  } catch (error) {
+    console.error("Error al actualizar presupuesto:", error);
+    return errorResponse("Error al actualizar presupuesto", 500);
+  }
+}
+
 export async function DELETE(
   _request: NextRequest,
   { params }: { params: Promise<{ id: string }> }

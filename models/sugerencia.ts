@@ -203,7 +203,7 @@ export async function findSuggestionsByUser(
     );
   }
 
-  const presupuestos = await presupuestoModel.findByUserId(userId);
+  const presupuestos = await presupuestoModel.findActiveByUserId(userId);
   const hasBudget = presupuestos.length > 0;
   const disponible = hasBudget
     ? presupuestos.reduce((sum, p) => sum + Number(p.valor), 0)

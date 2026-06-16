@@ -18,6 +18,7 @@ export interface Lugar {
   created_at: string;
   updated_at: string;
   transferencia: boolean;
+  estrellas: number | null;
 }
 
 export interface Categoria {
@@ -35,6 +36,7 @@ export interface Presupuesto {
   valor: number;
   valor_inicial: number;
   user_id: number;
+  activo: boolean;
 }
 
 export interface Producto {

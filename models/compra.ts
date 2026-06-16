@@ -46,8 +46,9 @@ export async function create(data: {
   id_producto: number;
   user_id: number;
   observacion: string;
+  cantidad?: number;
 }): Promise<{ compra: Compra; nuevo_valor: number }> {
-  const { id_producto, user_id, observacion } = data;
+  const { id_producto, user_id, observacion, cantidad = 1 } = data;
 
   const [prodRows] = await pool.query(
     "SELECT precio FROM productos WHERE id = ?",
@@ -57,9 +58,10 @@ export async function create(data: {
   if (!producto) throw new Error("Producto no encontrado");
 
   const precio = Number(producto.precio);
+  const totalCosto = precio * cantidad;
 
-  const presupuestos = await presupuestoModel.findByUserId(user_id);
-  if (presupuestos.length === 0) throw new Error("No tienes presupuesto asignado");
+  const presupuestos = await presupuestoModel.findActiveByUserId(user_id);
+  if (presupuestos.length === 0) throw new Error("No tienes presupuesto activo");
 
   const totalPresupuesto = presupuestos.reduce(
     (sum, p) => sum + Number(p.valor),
@@ -67,40 +69,43 @@ export async function create(data: {
   );
   const disponible = totalPresupuesto;
 
-  if (disponible < precio)
+  if (disponible < totalCosto)
     throw new Error(
-      `Presupuesto insuficiente. Disponible: $${disponible.toLocaleString("es-CL")}, Producto: $${precio.toLocaleString("es-CL")}`
+      `Presupuesto insuficiente. Disponible: $${disponible.toLocaleString("es-CL")}, Total: $${totalCosto.toLocaleString("es-CL")}`
     );
 
   const target = presupuestos.sort(
     (a, b) => Number(b.valor) - Number(a.valor)
   )[0];
-  const nuevoValor = Number(target.valor) - precio;
+  const nuevoValor = Number(target.valor) - totalCosto;
 
   await pool.query("UPDATE presupuestos SET valor = ? WHERE id = ?", [
     nuevoValor,
     target.id,
   ]);
 
-  const [result] = await pool.query(
-    "INSERT INTO compras (id_producto, user_id, observacion, agotado, fecha_agotado, create_at) VALUES (?, ?, ?, 0, NULL, NOW())",
-    [id_producto, user_id, observacion]
-  );
-  const compraId = (result as { insertId: number }).insertId;
+  let lastCompraId = 0;
+  for (let i = 0; i < cantidad; i++) {
+    const [result] = await pool.query(
+      "INSERT INTO compras (id_producto, user_id, observacion, agotado, fecha_agotado, create_at) VALUES (?, ?, ?, 0, NULL, NOW())",
+      [id_producto, user_id, observacion]
+    );
+    lastCompraId = (result as { insertId: number }).insertId;
+  }
 
   await pool.query(
     `UPDATE paks_productos pp
      JOIN packs pa ON pp.id_pack = pa.id
-     SET pp.unidades_compradas = LEAST(pp.unidades_compradas + 1, pp.cantidad)
+     SET pp.unidades_compradas = LEAST(pp.unidades_compradas + ?, pp.cantidad)
      WHERE pp.id_prod = ?
        AND pa.usuario_id = ?
        AND pp.unidades_compradas < pp.cantidad`,
-    [id_producto, user_id]
+    [cantidad, id_producto, user_id]
   );
 
   const [compraRows] = await pool.query(
     "SELECT id, create_at, observacion, id_producto, user_id, agotado, fecha_agotado FROM compras WHERE id = ?",
-    [compraId]
+    [lastCompraId]
   );
   const compra = (compraRows as Compra[])[0];
 

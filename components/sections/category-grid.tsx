@@ -251,6 +251,7 @@ export function CategoryGrid() {
   const [buying, setBuying] = useState(false);
   const [buyError, setBuyError] = useState("");
   const [buySuccess, setBuySuccess] = useState(false);
+  const [compraCantidad, setCompraCantidad] = useState(1);
 
   useEffect(() => {
     fetch("/api/categorias")
@@ -303,6 +304,7 @@ export function CategoryGrid() {
     setBuyProduct(producto);
     setBuyError("");
     setBuySuccess(false);
+    setCompraCantidad(1);
   }
 
   async function confirmarCompra() {
@@ -316,7 +318,10 @@ export function CategoryGrid() {
           "Content-Type": "application/json",
           "x-user-id": String(user!.id),
         },
-        body: JSON.stringify({ id_producto: buyProduct.id }),
+        body: JSON.stringify({
+          id_producto: buyProduct.id,
+          cantidad: compraCantidad,
+        }),
       });
       const json = await res.json();
       if (json.success) {
@@ -530,6 +535,51 @@ export function CategoryGrid() {
               </p>
             </div>
 
+            <div className="flex items-center gap-3 rounded-lg border border-zinc-200/70 bg-zinc-50 px-3 py-2.5 dark:border-zinc-800/60 dark:bg-zinc-900/40">
+              <label className="text-xs font-medium text-zinc-600 dark:text-zinc-400">
+                Cantidad
+              </label>
+              <div className="ml-auto flex items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => setCompraCantidad((q) => Math.max(1, q - 1))}
+                  className="flex h-7 w-7 items-center justify-center rounded-md border border-zinc-200 bg-white text-zinc-600 transition-colors hover:bg-zinc-100 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700"
+                >
+                  −
+                </button>
+                <input
+                  type="number"
+                  min={1}
+                  max={999}
+                  value={compraCantidad}
+                  onChange={(e) => {
+                    const v = parseInt(e.target.value, 10);
+                    if (!isNaN(v) && v >= 1 && v <= 999)
+                      setCompraCantidad(v);
+                  }}
+                  className="h-7 w-12 rounded-md border border-zinc-200 bg-white text-center text-sm font-medium tabular-nums text-zinc-900 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100 [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                />
+                <button
+                  type="button"
+                  onClick={() =>
+                    setCompraCantidad((q) => Math.min(999, q + 1))
+                  }
+                  className="flex h-7 w-7 items-center justify-center rounded-md border border-zinc-200 bg-white text-zinc-600 transition-colors hover:bg-zinc-100 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700"
+                >
+                  +
+                </button>
+              </div>
+            </div>
+
+            {compraCantidad > 1 && (
+              <p className="-mt-2 text-right text-xs font-medium text-violet-600 dark:text-violet-400">
+                Subtotal: $
+                {(
+                  Number(buyProduct.precio) * compraCantidad
+                ).toLocaleString("es-CL")}
+              </p>
+            )}
+
             {buyError && (
               <div className="flex items-center gap-2 rounded-lg bg-red-50 p-3 text-sm text-red-600 dark:bg-red-950 dark:text-red-400">
                 <AlertCircle className="h-4 w-4 shrink-0" />
@@ -568,7 +618,9 @@ export function CategoryGrid() {
                 Compra realizada
               </h3>
               <p className="text-sm text-zinc-500">
-                {buyProduct?.nombre} se ha agregado a tu lista
+                {buyProduct?.nombre}
+                {compraCantidad > 1 ? ` ×${compraCantidad}` : ""} se ha
+                agregado a tu lista
               </p>
             </div>
           </div>

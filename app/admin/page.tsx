@@ -1303,7 +1303,10 @@ export default function AdminPage() {
         open={createLugar}
         onClose={() => !creatingLugar && setCreateLugar(false)}
       >
-        <form onSubmit={handleCreateLugar} className="flex flex-col gap-3 sm:gap-4">
+        <form
+          onSubmit={handleCreateLugar}
+          className="flex flex-col gap-3 sm:gap-4"
+        >
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-100 text-emerald-600 dark:bg-emerald-950/60 dark:text-emerald-400">
               <Plus className="h-5 w-5" />
@@ -1365,14 +1368,10 @@ export default function AdminPage() {
           </div>
           <MapPicker
             lat={
-              createLugarForm.latitud
-                ? Number(createLugarForm.latitud)
-                : null
+              createLugarForm.latitud ? Number(createLugarForm.latitud) : null
             }
             lng={
-              createLugarForm.longitud
-                ? Number(createLugarForm.longitud)
-                : null
+              createLugarForm.longitud ? Number(createLugarForm.longitud) : null
             }
             onChange={(lat, lng, address) =>
               setCreateLugarForm((f) => ({
@@ -1463,7 +1462,10 @@ export default function AdminPage() {
         onClose={() => !editingLugar && setEditLugar(null)}
       >
         {editLugar && (
-          <form onSubmit={handleEditLugar} className="flex flex-col gap-3 sm:gap-4">
+          <form
+            onSubmit={handleEditLugar}
+            className="flex flex-col gap-3 sm:gap-4"
+          >
             <div className="flex items-center gap-3">
               <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-sky-100 text-sky-600 dark:bg-sky-950/60 dark:text-sky-400">
                 <Pencil className="h-5 w-5" />
@@ -1524,15 +1526,9 @@ export default function AdminPage() {
               />
             </div>
             <MapPicker
-              lat={
-                editLugarForm.latitud
-                  ? Number(editLugarForm.latitud)
-                  : null
-              }
+              lat={editLugarForm.latitud ? Number(editLugarForm.latitud) : null}
               lng={
-                editLugarForm.longitud
-                  ? Number(editLugarForm.longitud)
-                  : null
+                editLugarForm.longitud ? Number(editLugarForm.longitud) : null
               }
               onChange={(lat, lng, address) =>
                 setEditLugarForm((f) => ({
@@ -1675,10 +1671,7 @@ export default function AdminPage() {
         open={createProducto}
         onClose={() => !creatingProducto && setCreateProducto(false)}
       >
-        <form
-          onSubmit={handleCreateProducto}
-          className="flex flex-col gap-4"
-        >
+        <form onSubmit={handleCreateProducto} className="flex flex-col gap-4">
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-100 text-emerald-600 dark:bg-emerald-950/60 dark:text-emerald-400">
               <Plus className="h-5 w-5" />
@@ -1831,11 +1824,7 @@ export default function AdminPage() {
             >
               Cancelar
             </Button>
-            <Button
-              className="flex-1"
-              type="submit"
-              loading={creatingProducto}
-            >
+            <Button className="flex-1" type="submit" loading={creatingProducto}>
               <Plus className="mr-1.5 h-4 w-4" />
               Crear
             </Button>
@@ -1848,10 +1837,7 @@ export default function AdminPage() {
         onClose={() => !editingProducto && setEditProducto(null)}
       >
         {editProducto && (
-          <form
-            onSubmit={handleEditProducto}
-            className="flex flex-col gap-4"
-          >
+          <form onSubmit={handleEditProducto} className="flex flex-col gap-4">
             <div className="flex items-center gap-3">
               <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-sky-100 text-sky-600 dark:bg-sky-950/60 dark:text-sky-400">
                 <Pencil className="h-5 w-5" />
