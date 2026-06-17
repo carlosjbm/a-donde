@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { z } from "zod";
 import * as productModel from "@/models/producto";
 import { successResponse, errorResponse } from "@/lib/utils";
+import { requireAdmin, unauthorizedResponse } from "@/lib/admin-auth";
 
 const bodySchema = z.object({
   precio: z.coerce.number().positive("El precio debe ser mayor a 0"),
@@ -15,6 +16,9 @@ export async function PUT(
   try {
     const userId = request.headers.get("x-user-id");
     if (!userId) return errorResponse("No autenticado", 401);
+
+    const admin = await requireAdmin(request);
+    if (!admin) return unauthorizedResponse();
 
     const { id, productoId } = await context.params;
     const lugarId = Number(id);

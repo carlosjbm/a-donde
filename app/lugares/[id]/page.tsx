@@ -640,40 +640,44 @@ export default function LugarDetailPage() {
                           <span className="truncate font-medium text-zinc-900 dark:text-zinc-100">
                             {producto.nombre}
                           </span>
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setHistoryProducto(producto);
-                            }}
-                            aria-label="Ver fluctuación de precio"
-                            title="Ver fluctuación de precio"
-                            className="shrink-0 rounded p-0.5 text-zinc-400 transition-colors hover:bg-zinc-100 hover:text-zinc-700 dark:hover:bg-zinc-800 dark:hover:text-zinc-200"
+                          <div className="flex shrink-0 gap-1.5">
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setHistoryProducto(producto);
+                              }}
+                              aria-label="Ver fluctuación de precio"
+                              title="Ver fluctuación de precio"
+                              className="shrink-0 rounded p-0.5 text-zinc-400 transition-colors hover:bg-zinc-100 hover:text-zinc-700 dark:hover:bg-zinc-800 dark:hover:text-zinc-200"
+                            >
+                              <LineChart className="h-3.5 w-3.5" />
+                            </button>
+                            {user && user.rol_id === 1 && (
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setPriceEditProducto(producto);
+                                }}
+                                aria-label="Actualizar precio"
+                                title="Actualizar precio"
+                                className="shrink-0 rounded p-0.5 text-zinc-400 transition-colors hover:bg-zinc-100 hover:text-zinc-700 dark:hover:bg-zinc-800 dark:hover:text-zinc-200"
+                              >
+                                <Pencil className="h-3.5 w-3.5" />
+                              </button>
+                            )}
+                          </div>
+                          <p
+                            className={`text-sm font-semibold ${
+                              isHighlighted
+                                ? "text-amber-700 dark:text-amber-300"
+                                : "text-zinc-600 dark:text-zinc-400"
+                            }`}
                           >
-                            <LineChart className="h-3.5 w-3.5" />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setPriceEditProducto(producto);
-                            }}
-                            aria-label="Actualizar precio"
-                            title="Actualizar precio"
-                            className="shrink-0 rounded p-0.5 text-zinc-400 transition-colors hover:bg-zinc-100 hover:text-zinc-700 dark:hover:bg-zinc-800 dark:hover:text-zinc-200"
-                          >
-                            <Pencil className="h-3.5 w-3.5" />
-                          </button>
+                            ${Number(producto.precio).toLocaleString("es-CL")}
+                          </p>
                         </div>
-                        <p
-                          className={`text-sm font-semibold ${
-                            isHighlighted
-                              ? "text-amber-700 dark:text-amber-300"
-                              : "text-zinc-600 dark:text-zinc-400"
-                          }`}
-                        >
-                          ${Number(producto.precio).toLocaleString("es-CL")}
-                        </p>
                       </div>
                       <div className="flex shrink-0 gap-1.5 lg:self-center">
                         <Button
