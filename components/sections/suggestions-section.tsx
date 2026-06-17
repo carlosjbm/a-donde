@@ -188,7 +188,7 @@ function PackCard({ pack, index }: { pack: SugerenciaPack; index: number }) {
 
       {featured && (
         <Link
-          href={`/lugares/${featured.lugar_id}`}
+          href={`/lugares/${featured.lugar_id}?producto=${featured.id}&autobuy=1`}
           className="relative mt-5 flex items-center gap-4 rounded-xl border border-white/60 bg-white/70 p-3.5 backdrop-blur transition-colors hover:border-white hover:bg-white/90 dark:border-zinc-800/60 dark:bg-zinc-900/50 dark:hover:border-zinc-700 dark:hover:bg-zinc-900/80"
         >
           <ProductThumb producto={featured} theme={theme} />
@@ -224,7 +224,7 @@ function PackCard({ pack, index }: { pack: SugerenciaPack; index: number }) {
           {rest.slice(0, 3).map((producto) => (
             <li key={producto.id}>
               <Link
-                href={`/lugares/${producto.lugar_id}`}
+                href={`/lugares/${producto.lugar_id}?producto=${producto.id}&autobuy=1`}
                 className="group/row flex items-center gap-3 rounded-lg px-2.5 py-2 transition-colors hover:bg-white/70 dark:hover:bg-zinc-900/60"
               >
                 <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-white/70 ring-1 ring-zinc-200/80 dark:bg-zinc-900/60 dark:ring-zinc-800">
