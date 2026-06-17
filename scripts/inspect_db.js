@@ -5,10 +5,16 @@ function loadEnv(file) {
   const p = path.join(__dirname, "..", file);
   if (!fs.existsSync(p)) return;
   const content = fs.readFileSync(p, "utf8");
+
+  function parseValue(value) {
+    const quoteMatch = value.match(/^(['"])(.*)\1$/);
+    return quoteMatch ? quoteMatch[2] : value;
+  }
+
   for (const line of content.split("\n")) {
     const m = line.match(/^([A-Z_][A-Z0-9_]*)\s*=\s*(.*)$/);
     if (m && !process.env[m[1]]) {
-      process.env[m[1]] = m[2];
+      process.env[m[1]] = parseValue(m[2]);
     }
   }
 }
@@ -20,15 +26,15 @@ const mysql = require("mysql2/promise");
 async function inspect() {
   const conn = await mysql.createConnection({
     host: process.env.DB_HOST || "localhost",
-    user: process.env.DB_USER || "root",
+    user: process.env.DB_USER || process.env.DB_USERNAME || "root",
     password: process.env.DB_PASSWORD || "",
-    database: process.env.DB_NAME || "a-donde",
+    database: process.env.DB_NAME || process.env.DB_DATABASE || "a-donde",
   });
 
   try {
     const [tables] = await conn.query(
       "SELECT TABLE_NAME FROM information_schema.tables WHERE table_schema = ? ORDER BY TABLE_NAME",
-      [process.env.DB_NAME || "a-donde"]
+      [process.env.DB_NAME || "a-donde"],
     );
     console.log("=== TABLAS EXISTENTES ===");
     if (tables.length === 0) {
@@ -39,14 +45,20 @@ async function inspect() {
       }
     }
 
-    for (const tableName of ["productos", "usuarios", "lugares", "compras", "producto_precios"]) {
+    for (const tableName of [
+      "productos",
+      "usuarios",
+      "lugares",
+      "compras",
+      "producto_precios",
+    ]) {
       console.log(`\n=== ESTRUCTURA: ${tableName} ===`);
       const [cols] = await conn.query(
         `SELECT COLUMN_NAME, COLUMN_TYPE, IS_NULLABLE, COLUMN_KEY, COLUMN_DEFAULT, EXTRA
          FROM information_schema.columns
          WHERE table_schema = ? AND table_name = ?
          ORDER BY ORDINAL_POSITION`,
-        [process.env.DB_NAME || "a-donde", tableName]
+        [process.env.DB_NAME || "a-donde", tableName],
       );
       if (cols.length === 0) {
         console.log(" (no existe)");
@@ -60,7 +72,8 @@ async function inspect() {
           c.COLUMN_KEY || "",
           c.EXTRA || "",
         ];
-        if (c.COLUMN_DEFAULT !== null) parts.push(`DEFAULT '${c.COLUMN_DEFAULT}'`);
+        if (c.COLUMN_DEFAULT !== null)
+          parts.push(`DEFAULT '${c.COLUMN_DEFAULT}'`);
         console.log(" ", parts.join(" "));
       }
     }
@@ -71,13 +84,19 @@ async function inspect() {
        FROM information_schema.KEY_COLUMN_USAGE
        WHERE table_schema = ?
          AND REFERENCED_TABLE_NAME = 'productos'`,
-      [process.env.DB_NAME || "a-donde"]
+      [process.env.DB_NAME || "a-donde"],
     );
     if (fks.length === 0) {
       console.log(" (ninguna)");
     } else {
       for (const fk of fks) {
-        console.log(" ", fk.TABLE_NAME + "." + fk.COLUMN_NAME, "->", fk.REFERENCED_COLUMN_NAME, `[${fk.CONSTRAINT_NAME}]`);
+        console.log(
+          " ",
+          fk.TABLE_NAME + "." + fk.COLUMN_NAME,
+          "->",
+          fk.REFERENCED_COLUMN_NAME,
+          `[${fk.CONSTRAINT_NAME}]`,
+        );
       }
     }
   } finally {

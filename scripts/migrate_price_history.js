@@ -5,10 +5,16 @@ function loadEnv(file) {
   const p = path.join(__dirname, "..", file);
   if (!fs.existsSync(p)) return;
   const content = fs.readFileSync(p, "utf8");
+
+  function parseValue(value) {
+    const quoteMatch = value.match(/^(['"])(.*)\1$/);
+    return quoteMatch ? quoteMatch[2] : value;
+  }
+
   for (const line of content.split("\n")) {
     const m = line.match(/^([A-Z_][A-Z0-9_]*)\s*=\s*(.*)$/);
     if (m && !process.env[m[1]]) {
-      process.env[m[1]] = m[2];
+      process.env[m[1]] = parseValue(m[2]);
     }
   }
 }
@@ -57,9 +63,9 @@ const SQL_STATEMENTS = [
 async function run() {
   const conn = await mysql.createConnection({
     host: process.env.DB_HOST || "localhost",
-    user: process.env.DB_USER || "root",
+    user: process.env.DB_USER || process.env.DB_USERNAME || "root",
     password: process.env.DB_PASSWORD || "",
-    database: process.env.DB_NAME || "a-donde",
+    database: process.env.DB_NAME || process.env.DB_DATABASE || "a-donde",
     multipleStatements: false,
   });
 
@@ -82,7 +88,7 @@ async function run() {
     console.log("\n=== VERIFICACIÓN ===");
     const [tables] = await conn.query(
       "SELECT TABLE_NAME FROM information_schema.tables WHERE table_schema = ? AND table_name = 'producto_precios'",
-      [process.env.DB_NAME || "a-donde"]
+      [process.env.DB_NAME || "a-donde"],
     );
     console.log("Tabla creada:", tables.length > 0 ? "SÍ" : "NO");
 
@@ -92,11 +98,13 @@ async function run() {
        WHERE table_schema = ? AND table_name = 'producto_precios'
          AND REFERENCED_TABLE_NAME IS NOT NULL
        ORDER BY CONSTRAINT_NAME`,
-      [process.env.DB_NAME || "a-donde"]
+      [process.env.DB_NAME || "a-donde"],
     );
     console.log("Foreign keys:");
     for (const fk of fks) {
-      console.log(`  ${fk.CONSTRAINT_NAME}: ${fk.COLUMN_NAME} -> ${fk.REFERENCED_TABLE_NAME}.${fk.REFERENCED_COLUMN_NAME}`);
+      console.log(
+        `  ${fk.CONSTRAINT_NAME}: ${fk.COLUMN_NAME} -> ${fk.REFERENCED_TABLE_NAME}.${fk.REFERENCED_COLUMN_NAME}`,
+      );
     }
 
     const [indexes] = await conn.query(
@@ -104,7 +112,7 @@ async function run() {
        FROM information_schema.STATISTICS
        WHERE table_schema = ? AND table_name = 'producto_precios'
        ORDER BY INDEX_NAME, SEQ_IN_INDEX`,
-      [process.env.DB_NAME || "a-donde"]
+      [process.env.DB_NAME || "a-donde"],
     );
     console.log("Índices:");
     const seen = new Set();
@@ -119,7 +127,9 @@ async function run() {
       }
     }
 
-    const [count] = await conn.query("SELECT COUNT(*) AS total FROM producto_precios");
+    const [count] = await conn.query(
+      "SELECT COUNT(*) AS total FROM producto_precios",
+    );
     console.log("Filas en producto_precios:", count[0].total);
 
     const [sample] = await conn.query(
@@ -127,12 +137,14 @@ async function run() {
        FROM producto_precios pp
        JOIN productos p ON p.id = pp.id_producto
        ORDER BY pp.created_at DESC
-       LIMIT 5`
+       LIMIT 5`,
     );
     if (sample.length > 0) {
       console.log("\nÚltimas 5 entradas:");
       for (const s of sample) {
-        console.log(`  #${s.id} prod=${s.id_producto} "${s.nombre}" $${s.precio} (${s.fuente}) @ ${s.created_at}`);
+        console.log(
+          `  #${s.id} prod=${s.id_producto} "${s.nombre}" $${s.precio} (${s.fuente}) @ ${s.created_at}`,
+        );
       }
     }
   } finally {

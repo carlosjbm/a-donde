@@ -5,10 +5,16 @@ function loadEnv(file) {
   const p = path.join(__dirname, "..", file);
   if (!fs.existsSync(p)) return;
   const content = fs.readFileSync(p, "utf8");
+
+  function parseValue(value) {
+    const quoteMatch = value.match(/^(['"])(.*)\1$/);
+    return quoteMatch ? quoteMatch[2] : value;
+  }
+
   for (const line of content.split("\n")) {
     const m = line.match(/^([A-Z_][A-Z0-9_]*)\s*=\s*(.*)$/);
     if (m && !process.env[m[1]]) {
-      process.env[m[1]] = m[2];
+      process.env[m[1]] = parseValue(m[2]);
     }
   }
 }
@@ -20,15 +26,17 @@ const mysql = require("mysql2/promise");
 async function run() {
   const conn = await mysql.createConnection({
     host: process.env.DB_HOST || "localhost",
-    user: process.env.DB_USER || "root",
+    user: process.env.DB_USER || process.env.DB_USERNAME || "root",
     password: process.env.DB_PASSWORD || "",
-    database: process.env.DB_NAME || "a-donde",
+    database: process.env.DB_NAME || process.env.DB_DATABASE || "a-donde",
   });
 
   try {
-    console.log("[1/2] Cambiando collation de productos.nombre a utf8mb4_unicode_ci...");
+    console.log(
+      "[1/2] Cambiando collation de productos.nombre a utf8mb4_unicode_ci...",
+    );
     await conn.query(
-      "ALTER TABLE productos MODIFY nombre VARCHAR(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL"
+      "ALTER TABLE productos MODIFY nombre VARCHAR(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL",
     );
     console.log("  -> OK");
 
@@ -37,7 +45,7 @@ async function run() {
       `SELECT TABLE_NAME, TABLE_COLLATION
        FROM information_schema.tables
        WHERE table_schema = ? AND table_name = 'productos'`,
-      [process.env.DB_NAME || "a-donde"]
+      [process.env.DB_NAME || "a-donde"],
     );
     console.log("  ->", cols[0]);
 
@@ -46,14 +54,16 @@ async function run() {
       `SELECT id, nombre, precio FROM productos
        WHERE nombre COLLATE utf8mb4_unicode_ci = ?
        ORDER BY id`,
-      ["bolsa de pan suave 10u"]
+      ["bolsa de pan suave 10u"],
     );
     console.log("Buscar 'bolsa de pan suave 10u' (sin acentos) contra la BD:");
     for (const row of r) {
       console.log(`  #${row.id} "${row.nombre}" $${row.precio}`);
     }
 
-    console.log("\n=== PRUEBA DE getPriceHistory PARA ESE NOMBRE (periodo=mes) ===");
+    console.log(
+      "\n=== PRUEBA DE getPriceHistory PARA ESE NOMBRE (periodo=mes) ===",
+    );
     const [puntos] = await conn.query(
       `SELECT DATE_FORMAT(pp.created_at, '%Y-%m') AS periodo,
               MIN(DATE_FORMAT(pp.created_at, '%Y-%m-01')) AS fecha_inicio,
@@ -66,17 +76,18 @@ async function run() {
        WHERE p.nombre COLLATE utf8mb4_unicode_ci = ?
        GROUP BY periodo
        ORDER BY MIN(pp.created_at) ASC`,
-      ["bolsa de pan suave 10u"]
+      ["bolsa de pan suave 10u"],
     );
     if (puntos.length === 0) {
       console.log("  (sin puntos)");
     } else {
       for (const p of puntos) {
-        const fecha = p.fecha_inicio instanceof Date
-          ? p.fecha_inicio.toISOString().slice(0, 10)
-          : String(p.fecha_inicio).slice(0, 10);
+        const fecha =
+          p.fecha_inicio instanceof Date
+            ? p.fecha_inicio.toISOString().slice(0, 10)
+            : String(p.fecha_inicio).slice(0, 10);
         console.log(
-          `  ${p.periodo} (${fecha}): prom=$${Number(p.promedio).toFixed(0)} min=$${p.minimo} max=$${p.maximo} n=${p.cantidad}`
+          `  ${p.periodo} (${fecha}): prom=$${Number(p.promedio).toFixed(0)} min=$${p.minimo} max=$${p.maximo} n=${p.cantidad}`,
         );
       }
     }
