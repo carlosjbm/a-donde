@@ -196,31 +196,34 @@ export default function LugarDetailPage() {
   const lugarRef = useRef(lugar);
   lugarRef.current = lugar;
 
-  const handleRate = useCallback(async (estrellas: number) => {
-    if (!user) return;
-    setRatingLoading(true);
-    setUserRating(estrellas);
-    try {
-      const res = await fetch(`/api/lugares/${lugarRef.current!.id}/rate`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ estrellas }),
-      });
-      const json = await res.json();
-      if (json.success) {
-        setLugar(json.data);
-        showToast("success", "Valoración guardada");
-      } else {
+  const handleRate = useCallback(
+    async (estrellas: number) => {
+      if (!user) return;
+      setRatingLoading(true);
+      setUserRating(estrellas);
+      try {
+        const res = await fetch(`/api/lugares/${lugarRef.current!.id}/rate`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ estrellas }),
+        });
+        const json = await res.json();
+        if (json.success) {
+          setLugar(json.data);
+          showToast("success", "Valoración guardada");
+        } else {
+          setUserRating(null);
+          showToast("error", json.error);
+        }
+      } catch {
         setUserRating(null);
-        showToast("error", json.error);
+        showToast("error", "Error al valorar");
+      } finally {
+        setRatingLoading(false);
       }
-    } catch {
-      setUserRating(null);
-      showToast("error", "Error al valorar");
-    } finally {
-      setRatingLoading(false);
-    }
-  }, [user, showToast]);
+    },
+    [user, showToast],
+  );
 
   const highlightedProductId = Number(searchParams.get("producto")) || null;
   const productRefs = useRef<Record<number, HTMLDivElement | null>>({});
@@ -620,7 +623,7 @@ export default function LugarDetailPage() {
                       ref={(el) => {
                         productRefs.current[producto.id] = el;
                       }}
-                      className={`flex flex-col gap-3 rounded-lg border p-4 transition-all hover:bg-zinc-50 lg:flex-row lg:items-center lg:gap-4 dark:hover:bg-zinc-800/50 ${
+                      className={`w-full overflow-hidden flex flex-col gap-3 rounded-lg border p-4 transition-all hover:bg-zinc-50 lg:flex-row lg:items-center lg:gap-4 dark:hover:bg-zinc-800/50 ${
                         isHighlighted
                           ? "border-amber-400 bg-amber-50 ring-2 ring-amber-300 ring-offset-2 dark:border-amber-500 dark:bg-amber-950/30 dark:ring-amber-500/50"
                           : "border-zinc-200 dark:border-zinc-700"
@@ -636,22 +639,36 @@ export default function LugarDetailPage() {
                         <Package className="h-5 w-5" />
                       </div>
                       <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-1.5">
-                          <span className="truncate font-medium text-zinc-900 dark:text-zinc-100">
-                            {producto.nombre}
-                          </span>
-                          <div className="flex shrink-0 gap-1.5">
+                        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="truncate font-medium text-zinc-900 dark:text-zinc-100">
+                              {producto.nombre}
+                            </span>
+                            <p
+                              className={`shrink-0 text-sm font-semibold ${
+                                isHighlighted
+                                  ? "text-amber-700 dark:text-amber-300"
+                                  : "text-zinc-600 dark:text-zinc-400"
+                              }`}
+                            >
+                              ${Number(producto.precio).toLocaleString("es-CL")}
+                            </p>
+                          </div>
+                          <div className="flex shrink-0 items-center gap-1.5">
                             <button
                               type="button"
                               onClick={(e) => {
                                 e.stopPropagation();
                                 setHistoryProducto(producto);
                               }}
-                              aria-label="Ver fluctuación de precio"
-                              title="Ver fluctuación de precio"
-                              className="shrink-0 rounded p-0.5 text-zinc-400 transition-colors hover:bg-zinc-100 hover:text-zinc-700 dark:hover:bg-zinc-800 dark:hover:text-zinc-200"
+                              aria-label="Ver comportamiento del precio"
+                              title="Ver comportamiento del precio"
+                              className="flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-medium text-zinc-600 transition-colors hover:bg-blue-50 hover:text-blue-700 dark:text-zinc-400 dark:hover:bg-blue-950/40 dark:hover:text-blue-300"
                             >
-                              <LineChart className="h-3.5 w-3.5" />
+                              <LineChart className="h-4 w-4" />
+                              <span className="hidden sm:inline">
+                                Comportamiento
+                              </span>
                             </button>
                             {user && user.rol_id === 1 && (
                               <button
@@ -662,41 +679,35 @@ export default function LugarDetailPage() {
                                 }}
                                 aria-label="Actualizar precio"
                                 title="Actualizar precio"
-                                className="shrink-0 rounded p-0.5 text-zinc-400 transition-colors hover:bg-zinc-100 hover:text-zinc-700 dark:hover:bg-zinc-800 dark:hover:text-zinc-200"
+                                className="flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-medium text-zinc-600 transition-colors hover:bg-amber-50 hover:text-amber-700 dark:text-zinc-400 dark:hover:bg-amber-950/40 dark:hover:text-amber-300"
                               >
-                                <Pencil className="h-3.5 w-3.5" />
+                                <Pencil className="h-4 w-4" />
+                                <span className="hidden sm:inline">Editar</span>
                               </button>
                             )}
                           </div>
-                          <p
-                            className={`text-sm font-semibold ${
-                              isHighlighted
-                                ? "text-amber-700 dark:text-amber-300"
-                                : "text-zinc-600 dark:text-zinc-400"
-                            }`}
-                          >
-                            ${Number(producto.precio).toLocaleString("es-CL")}
-                          </p>
                         </div>
                       </div>
-                      <div className="flex shrink-0 gap-1.5 lg:self-center">
-                        <Button
-                          onClick={() => abrirPackModal(producto)}
-                          size="sm"
-                          variant="secondary"
-                          className="shrink-0"
-                          aria-label={`Agregar ${producto.nombre} a un pack`}
-                        >
-                          <ListPlus className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          onClick={() => abrirModal(producto)}
-                          size="sm"
-                          className="shrink-0"
-                        >
-                          <ShoppingCart className="mr-1.5 h-4 w-4" />
-                          Comprar
-                        </Button>
+                      <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:justify-end lg:self-center">
+                        <div className="flex gap-2 items-center w-full sm:w-auto">
+                          <Button
+                            onClick={() => abrirPackModal(producto)}
+                            size="sm"
+                            variant="secondary"
+                            className="shrink-0"
+                            aria-label={`Agregar ${producto.nombre} a un pack`}
+                          >
+                            <ListPlus className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            onClick={() => abrirModal(producto)}
+                            size="sm"
+                            className="shrink-0 ml-auto sm:ml-0"
+                          >
+                            <ShoppingCart className="mr-1.5 h-4 w-4" />
+                            <span className="hidden xs:inline">Comprar</span>
+                          </Button>
+                        </div>
                       </div>
                     </div>
                   );
@@ -790,16 +801,13 @@ export default function LugarDetailPage() {
                   value={compraCantidad}
                   onChange={(e) => {
                     const v = parseInt(e.target.value, 10);
-                    if (!isNaN(v) && v >= 1 && v <= 999)
-                      setCompraCantidad(v);
+                    if (!isNaN(v) && v >= 1 && v <= 999) setCompraCantidad(v);
                   }}
                   className="h-7 w-12 rounded-md border border-zinc-200 bg-white text-center text-sm font-medium tabular-nums text-zinc-900 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100 [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                 />
                 <button
                   type="button"
-                  onClick={() =>
-                    setCompraCantidad((q) => Math.min(999, q + 1))
-                  }
+                  onClick={() => setCompraCantidad((q) => Math.min(999, q + 1))}
                   className="flex h-7 w-7 items-center justify-center rounded-md border border-zinc-200 bg-white text-zinc-600 transition-colors hover:bg-zinc-100 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700"
                 >
                   +

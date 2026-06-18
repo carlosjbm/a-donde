@@ -18,7 +18,9 @@ export function SearchBar({ className = "" }: SearchBarProps) {
   const [loading, setLoading] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | undefined>(
+    undefined,
+  );
 
   const handleSearch = useCallback(async (q: string) => {
     if (q.trim().length < 2) {
@@ -106,9 +108,7 @@ export function SearchBar({ className = "" }: SearchBarProps) {
             <div
               key={`${result.id}-${result.lugar_id}`}
               className={`flex items-center gap-2 px-3 py-2.5 transition-colors hover:bg-zinc-50 dark:hover:bg-zinc-700/50 ${
-                index > 0
-                  ? "border-t border-zinc-100 dark:border-zinc-700"
-                  : ""
+                index > 0 ? "border-t border-zinc-100 dark:border-zinc-700" : ""
               }`}
             >
               <Link
@@ -136,10 +136,29 @@ export function SearchBar({ className = "" }: SearchBarProps) {
                   <p className="truncate text-sm font-medium text-zinc-900 dark:text-zinc-100">
                     {result.nombre}
                   </p>
-                  <p className="flex items-center gap-1 text-xs text-zinc-500">
-                    <MapPin className="h-3 w-3" />
-                    {result.lugar_nombre}
-                  </p>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="flex items-center gap-1 text-xs text-zinc-500">
+                      <MapPin className="h-3 w-3" />
+                      {result.lugar_nombre}
+                    </p>
+                    <span
+                      className={`inline-flex items-center gap-1 whitespace-nowrap rounded-md px-2 py-1 text-[11px] font-medium transition-colors ${
+                        result.transferencia
+                          ? "bg-blue-50 text-blue-700 ring-1 ring-blue-200 dark:bg-blue-950/40 dark:text-blue-300 dark:ring-blue-800"
+                          : "bg-orange-50 text-orange-700 ring-1 ring-orange-200 dark:bg-orange-950/40 dark:text-orange-300 dark:ring-orange-800"
+                      }`}
+                      title={
+                        result.transferencia
+                          ? "Acepta transferencia bancaria"
+                          : "Solo efectivo"
+                      }
+                    >
+                      {result.transferencia ? "💳" : "💵"}
+                      <span className="hidden sm:inline">
+                        {result.transferencia ? "Transf" : "Efect"}
+                      </span>
+                    </span>
+                  </div>
                 </div>
                 <div className="shrink-0 text-right">
                   <p className="text-sm font-semibold text-emerald-600 dark:text-emerald-400">

@@ -48,7 +48,7 @@ export async function searchByNombre(
   query: string,
 ): Promise<ProductoSearchResult[]> {
   const [rows] = await pool.query(
-    `SELECT p.id, p.nombre, p.precio, l.id AS lugar_id, l.nombre AS lugar_nombre
+    `SELECT p.id, p.nombre, p.precio, l.id AS lugar_id, l.nombre AS lugar_nombre, l.transferencia
      FROM productos p
      JOIN lugares l ON p.id_lugar = l.id
      WHERE LOWER(p.nombre) LIKE LOWER(?) AND p.activo = true

@@ -56,7 +56,11 @@ export interface Producto {
   categoria?: string | null;
 }
 
-export type ProductoPrecioFuente = "manual" | "compra" | "importacion" | "sistema";
+export type ProductoPrecioFuente =
+  | "manual"
+  | "compra"
+  | "importacion"
+  | "sistema";
 
 export interface ProductoPrecio {
   id: number;
@@ -110,6 +114,7 @@ export interface ProductoSearchResult {
   precio: number;
   lugar_id: number;
   lugar_nombre: string;
+  transferencia: boolean;
 }
 
 export interface SugerenciaProducto {
