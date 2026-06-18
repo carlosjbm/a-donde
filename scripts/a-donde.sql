@@ -28,7 +28,7 @@ SET time_zone = "+00:00";
 --
 
 CREATE TABLE `categorias` (
-  `id` int(11) NOT NULL,
+  `id` int(11) NOT NULL AUTO_INCREMENT,
   `nombre` varchar(255) NOT NULL,
   `descripcion` varchar(255) NOT NULL,
   `icono` varchar(500) NOT NULL,
@@ -53,14 +53,14 @@ INSERT INTO `categorias` (`id`, `nombre`, `descripcion`, `icono`, `created_at`, 
 --
 
 CREATE TABLE `compras` (
-  `id` int(11) NOT NULL,
+  `id` int(11) NOT NULL AUTO_INCREMENT,
   `create_at` datetime NOT NULL,
   `observacion` varchar(255) DEFAULT NULL,
   `id_producto` int(11) NOT NULL,
   `user_id` int(11) NOT NULL,
   `agotado` tinyint(1) NOT NULL,
   `fecha_agotado` datetime DEFAULT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci AUTO_INCREMENT=38;
 
 --
 -- Volcado de datos para la tabla `compras`
@@ -105,7 +105,7 @@ INSERT INTO `compras` (`id`, `create_at`, `observacion`, `id_producto`, `user_id
 --
 
 CREATE TABLE `lugares` (
-  `id` int(11) NOT NULL,
+  `id` int(11) NOT NULL AUTO_INCREMENT ,
   `nombre` varchar(255) NOT NULL,
   `descripcion` varchar(255) NOT NULL,
   `direccion` varchar(500) NOT NULL,
@@ -137,7 +137,7 @@ INSERT INTO `lugares` (`id`, `nombre`, `descripcion`, `direccion`, `latitud`, `l
 --
 
 CREATE TABLE `packs` (
-  `id` int(11) NOT NULL,
+  `id` int(11) NOT NULL AUTO_INCREMENT,
   `nombre` varchar(255) NOT NULL,
   `usuario_id` int(11) NOT NULL,
   `created_at` datetime NOT NULL
@@ -157,7 +157,7 @@ INSERT INTO `packs` (`id`, `nombre`, `usuario_id`, `created_at`) VALUES
 --
 
 CREATE TABLE `paks_productos` (
-  `id` int(11) NOT NULL,
+  `id` int(11) NOT NULL AUTO_INCREMENT,
   `id_pack` int(11) NOT NULL,
   `id_prod` int(11) NOT NULL,
   `usuario_id` int(11) NOT NULL,
@@ -181,7 +181,7 @@ INSERT INTO `paks_productos` (`id`, `id_pack`, `id_prod`, `usuario_id`, `cantida
 --
 
 CREATE TABLE `presupuestos` (
-  `id` int(11) NOT NULL,
+  `id` int(11) NOT NULL AUTO_INCREMENT,
   `created_date` datetime NOT NULL,
   `descripcion` varchar(255) NOT NULL,
   `valor` decimal(11,0) NOT NULL,
@@ -205,7 +205,7 @@ INSERT INTO `presupuestos` (`id`, `created_date`, `descripcion`, `valor`, `valor
 --
 
 CREATE TABLE `productos` (
-  `id` int(11) NOT NULL,
+  `id` int(11) NOT NULL AUTO_INCREMENT,
   `nombre` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `precio` int(11) NOT NULL,
   `id_lugar` int(11) NOT NULL,
@@ -259,7 +259,7 @@ INSERT INTO `productos` (`id`, `nombre`, `precio`, `id_lugar`, `escencial`, `ima
 --
 
 CREATE TABLE `producto_precios` (
-  `id` int(11) NOT NULL,
+  `id` int(11) NOT NULL AUTO_INCREMENT,
   `id_producto` int(11) NOT NULL,
   `precio` int(11) NOT NULL,
   `id_usuario` int(11) DEFAULT NULL,
@@ -304,7 +304,7 @@ INSERT INTO `producto_precios` (`id`, `id_producto`, `precio`, `id_usuario`, `fu
 --
 
 CREATE TABLE `sesiones` (
-  `id` int(11) NOT NULL,
+  `id` int(11) NOT NULL AUTO_INCREMENT,
   `usuario_id` int(11) NOT NULL,
   `refresh_token` varchar(255) NOT NULL,
   `expires_at` datetime NOT NULL
@@ -389,7 +389,7 @@ INSERT INTO `sesiones` (`id`, `usuario_id`, `refresh_token`, `expires_at`) VALUE
 --
 
 CREATE TABLE `syst_roles` (
-  `id` int(11) NOT NULL,
+  `id` int(11) NOT NULL AUTO_INCREMENT,
   `nombre` varchar(255) NOT NULL,
   `descripcion` varchar(255) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
@@ -409,7 +409,7 @@ INSERT INTO `syst_roles` (`id`, `nombre`, `descripcion`) VALUES
 --
 
 CREATE TABLE `usuarios` (
-  `id` int(11) NOT NULL,
+  `id` int(11) NOT NULL AUTO_INCREMENT,
   `nombre` varchar(255) NOT NULL,
   `email` varchar(255) NOT NULL,
   `password` varchar(255) NOT NULL,
@@ -433,7 +433,7 @@ INSERT INTO `usuarios` (`id`, `nombre`, `email`, `password`, `rol_id`, `created_
 --
 
 CREATE TABLE `valoraciones` (
-  `id` int(11) NOT NULL,
+  `id` int(11) NOT NULL AUTO_INCREMENT,
   `id_lugar` int(11) NOT NULL,
   `user_id` int(11) NOT NULL,
   `estrellas` int(11) NOT NULL CHECK (`estrellas` >= 1 and `estrellas` <= 5),
