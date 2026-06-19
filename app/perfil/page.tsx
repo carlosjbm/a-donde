@@ -629,10 +629,7 @@ export default function PerfilPage() {
   const [pendingAgotado, setPendingAgotado] = useState<Set<number>>(new Set());
   const [filter, setFilter] = useState<FilterTab>("todas");
   const [search, setSearch] = useState("");
-  const todayStr = useMemo(
-    () => new Date().toISOString().split("T")[0],
-    [],
-  );
+  const todayStr = useMemo(() => new Date().toISOString().split("T")[0], []);
   const [fechaFiltro, setFechaFiltro] = useState(todayStr);
 
   const [descripcion, setDescripcion] = useState("");
@@ -640,7 +637,9 @@ export default function PerfilPage() {
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState("");
   const [showForm, setShowForm] = useState(false);
-  const [deactivatingPresupuesto, setDeactivatingPresupuesto] = useState<number | null>(null);
+  const [deactivatingPresupuesto, setDeactivatingPresupuesto] = useState<
+    number | null
+  >(null);
   const [showNewPackForm, setShowNewPackForm] = useState(false);
   const [newPackName, setNewPackName] = useState("");
   const [creatingPack, setCreatingPack] = useState(false);
@@ -723,6 +722,17 @@ export default function PerfilPage() {
   const totalComprasFecha = comprasFecha.length;
   const enDespensaFecha = comprasFecha.filter((c) => !c.agotado).length;
   const agotadosFecha = comprasFecha.filter((c) => c.agotado).length;
+
+  const comprasCountPorFecha = useMemo(() => {
+    const counts: Record<string, number> = {};
+    for (const c of compras) {
+      const d = c.create_at
+        ? new Date(c.create_at).toISOString().split("T")[0]
+        : "";
+      if (d) counts[d] = (counts[d] || 0) + 1;
+    }
+    return counts;
+  }, [compras]);
 
   const filteredCompras = useMemo(() => {
     let list = comprasFecha;
@@ -1108,33 +1118,37 @@ export default function PerfilPage() {
               ) : (
                 <div className="space-y-2">
                   {[...presupuestos]
-                    .sort((a, b) => (a.activo === b.activo ? 0 : a.activo ? -1 : 1))
+                    .sort((a, b) =>
+                      a.activo === b.activo ? 0 : a.activo ? -1 : 1,
+                    )
                     .map((p, i) => (
-                    <div
-                      key={p.id}
-                      style={{
-                        animation: "fadeInUp 0.4s ease both",
-                        animationDelay: `${i * 60}ms`,
-                      }}
-                    >
-                      <BudgetItem
-                        presupuesto={p}
-                        isPrimary={
-                          p.activo &&
-                          Number(p.valor) ===
-                            Math.max(
-                              ...presupuestosActivos.map((pp) => Number(pp.valor)),
-                              0,
-                            )
-                        }
-                        onDeactivate={
-                          p.activo
-                            ? () => handleDeactivatePresupuesto(p)
-                            : undefined
-                        }
-                      />
-                    </div>
-                  ))}
+                      <div
+                        key={p.id}
+                        style={{
+                          animation: "fadeInUp 0.4s ease both",
+                          animationDelay: `${i * 60}ms`,
+                        }}
+                      >
+                        <BudgetItem
+                          presupuesto={p}
+                          isPrimary={
+                            p.activo &&
+                            Number(p.valor) ===
+                              Math.max(
+                                ...presupuestosActivos.map((pp) =>
+                                  Number(pp.valor),
+                                ),
+                                0,
+                              )
+                          }
+                          onDeactivate={
+                            p.activo
+                              ? () => handleDeactivatePresupuesto(p)
+                              : undefined
+                          }
+                        />
+                      </div>
+                    ))}
                 </div>
               )}
             </div>
@@ -1384,129 +1398,140 @@ export default function PerfilPage() {
                         <div className="border-t border-zinc-200/70 px-4 pb-3 pt-2 dark:border-zinc-800/60 sm:px-5">
                           <div className="space-y-1">
                             {pack.productos.map((prod) => {
-                              const parcial = prod.cantidad > 1 && prod.unidades_compradas > 0 && !prod.comprado;
+                              const parcial =
+                                prod.cantidad > 1 &&
+                                prod.unidades_compradas > 0 &&
+                                !prod.comprado;
                               return (
-                              <div
-                                key={prod.id}
-                                className={`group/producto flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 ${
-                                  prod.comprado
-                                    ? "bg-zinc-50 dark:bg-zinc-800/40"
-                                    : "bg-white dark:bg-zinc-900/60"
-                                }`}
-                              >
                                 <div
-                                  className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-xs ${
+                                  key={prod.id}
+                                  className={`group/producto flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 ${
                                     prod.comprado
-                                      ? "bg-emerald-100 text-emerald-600 dark:bg-emerald-950/60 dark:text-emerald-400"
-                                      : parcial
-                                        ? "bg-amber-100 text-amber-600 dark:bg-amber-950/60 dark:text-amber-400"
-                                        : "bg-zinc-100 text-zinc-400 dark:bg-zinc-800"
+                                      ? "bg-zinc-50 dark:bg-zinc-800/40"
+                                      : "bg-white dark:bg-zinc-900/60"
                                   }`}
                                 >
-                                  {prod.comprado ? (
-                                    <Check className="h-3 w-3" />
-                                  ) : (
-                                    <ShoppingBag className="h-3 w-3" />
-                                  )}
-                                </div>
-                                <span
-                                  className={`min-w-0 flex-1 truncate text-xs ${
-                                    prod.comprado
-                                      ? "text-zinc-500 line-through dark:text-zinc-500"
-                                      : "text-zinc-800 dark:text-zinc-200"
-                                  }`}
-                                >
-                                  {prod.nombre}
-                                </span>
-                                {prod.cantidad > 1 && (
-                                  <span
-                                    className={`shrink-0 rounded px-1.5 py-0.5 text-[10px] font-bold ${
+                                  <div
+                                    className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-xs ${
                                       prod.comprado
-                                        ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300"
+                                        ? "bg-emerald-100 text-emerald-600 dark:bg-emerald-950/60 dark:text-emerald-400"
                                         : parcial
-                                          ? "bg-amber-100 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300"
-                                          : "bg-violet-100 text-violet-700 dark:bg-violet-950/60 dark:text-violet-300"
+                                          ? "bg-amber-100 text-amber-600 dark:bg-amber-950/60 dark:text-amber-400"
+                                          : "bg-zinc-100 text-zinc-400 dark:bg-zinc-800"
                                     }`}
                                   >
-                                    {prod.comprado
-                                      ? `\u2713x${prod.cantidad}`
-                                      : parcial
-                                        ? `${prod.unidades_compradas}/${prod.cantidad}`
-                                        : `x${prod.cantidad}`}
+                                    {prod.comprado ? (
+                                      <Check className="h-3 w-3" />
+                                    ) : (
+                                      <ShoppingBag className="h-3 w-3" />
+                                    )}
+                                  </div>
+                                  <span
+                                    className={`min-w-0 flex-1 truncate text-xs ${
+                                      prod.comprado
+                                        ? "text-zinc-500 line-through dark:text-zinc-500"
+                                        : "text-zinc-800 dark:text-zinc-200"
+                                    }`}
+                                  >
+                                    {prod.nombre}
                                   </span>
-                                )}
-                                <span className="shrink-0 text-[11px] font-medium tabular-nums text-zinc-500 dark:text-zinc-400">
-                                  $
-                                  {(
-                                    Number(prod.precio) * prod.cantidad
-                                  ).toLocaleString("es-CL")}
-                                </span>
-                                <span className="hidden truncate text-[10px] text-zinc-400 sm:inline dark:text-zinc-500">
-                                  {prod.lugar_nombre}
-                                </span>
-                                <button
-                                  type="button"
-                                  onClick={async () => {
-                                    if (!confirm(`¿Eliminar "${prod.nombre}" de este pack?`)) return;
-                                    try {
-                                      const res = await fetch(
-                                        `/api/packs/${pack.id}/productos/${prod.producto_id}`,
-                                        { method: "DELETE" },
-                                      );
-                                      const json = await res.json();
-                                      if (json.success) {
-                                        setPacks((prev) =>
-                                          prev.map((p) =>
-                                            p.id === pack.id
-                                              ? {
-                                                  ...p,
-                                                  productos: p.productos.filter(
-                                                    (pp) => pp.id !== prod.id,
-                                                  ),
-                                                  total_productos:
-                                                    p.total_productos - 1,
-                                                  total_unidades:
-                                                    p.total_unidades -
-                                                    prod.cantidad,
-                                                  precio_total:
-                                                    p.precio_total -
-                                                    Number(prod.precio) *
+                                  {prod.cantidad > 1 && (
+                                    <span
+                                      className={`shrink-0 rounded px-1.5 py-0.5 text-[10px] font-bold ${
+                                        prod.comprado
+                                          ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300"
+                                          : parcial
+                                            ? "bg-amber-100 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300"
+                                            : "bg-violet-100 text-violet-700 dark:bg-violet-950/60 dark:text-violet-300"
+                                      }`}
+                                    >
+                                      {prod.comprado
+                                        ? `\u2713x${prod.cantidad}`
+                                        : parcial
+                                          ? `${prod.unidades_compradas}/${prod.cantidad}`
+                                          : `x${prod.cantidad}`}
+                                    </span>
+                                  )}
+                                  <span className="shrink-0 text-[11px] font-medium tabular-nums text-zinc-500 dark:text-zinc-400">
+                                    $
+                                    {(
+                                      Number(prod.precio) * prod.cantidad
+                                    ).toLocaleString("es-CL")}
+                                  </span>
+                                  <span className="hidden truncate text-[10px] text-zinc-400 sm:inline dark:text-zinc-500">
+                                    {prod.lugar_nombre}
+                                  </span>
+                                  <button
+                                    type="button"
+                                    onClick={async () => {
+                                      if (
+                                        !confirm(
+                                          `¿Eliminar "${prod.nombre}" de este pack?`,
+                                        )
+                                      )
+                                        return;
+                                      try {
+                                        const res = await fetch(
+                                          `/api/packs/${pack.id}/productos/${prod.producto_id}`,
+                                          { method: "DELETE" },
+                                        );
+                                        const json = await res.json();
+                                        if (json.success) {
+                                          setPacks((prev) =>
+                                            prev.map((p) =>
+                                              p.id === pack.id
+                                                ? {
+                                                    ...p,
+                                                    productos:
+                                                      p.productos.filter(
+                                                        (pp) =>
+                                                          pp.id !== prod.id,
+                                                      ),
+                                                    total_productos:
+                                                      p.total_productos - 1,
+                                                    total_unidades:
+                                                      p.total_unidades -
                                                       prod.cantidad,
-                                                  pendientes:
-                                                    p.pendientes -
-                                                    (prod.comprado
-                                                      ? 0
-                                                      : prod.cantidad -
-                                                        prod.unidades_compradas),
-                                                  unidades_compradas:
-                                                    prod.unidades_compradas > 0
-                                                      ? p.unidades_compradas -
-                                                        prod.unidades_compradas
-                                                      : p.unidades_compradas,
-                                                }
-                                              : p,
-                                          ),
-                                        );
+                                                    precio_total:
+                                                      p.precio_total -
+                                                      Number(prod.precio) *
+                                                        prod.cantidad,
+                                                    pendientes:
+                                                      p.pendientes -
+                                                      (prod.comprado
+                                                        ? 0
+                                                        : prod.cantidad -
+                                                          prod.unidades_compradas),
+                                                    unidades_compradas:
+                                                      prod.unidades_compradas >
+                                                      0
+                                                        ? p.unidades_compradas -
+                                                          prod.unidades_compradas
+                                                        : p.unidades_compradas,
+                                                  }
+                                                : p,
+                                            ),
+                                          );
+                                          showToast(
+                                            "success",
+                                            `"${prod.nombre}" eliminado del pack`,
+                                          );
+                                        } else {
+                                          showToast("error", json.error);
+                                        }
+                                      } catch {
                                         showToast(
-                                          "success",
-                                          `"${prod.nombre}" eliminado del pack`,
+                                          "error",
+                                          "Error al eliminar producto",
                                         );
-                                      } else {
-                                        showToast("error", json.error);
                                       }
-                                    } catch {
-                                      showToast(
-                                        "error",
-                                        "Error al eliminar producto",
-                                      );
-                                    }
-                                  }}
-                                  className="shrink-0 rounded-md p-1 text-zinc-400 transition-all hover:bg-zinc-100 hover:text-rose-600 sm:opacity-0 sm:group-hover/producto:opacity-100 dark:hover:bg-zinc-800 dark:hover:text-rose-400"
-                                  aria-label={`Eliminar ${prod.nombre} del pack`}
-                                >
-                                  <X className="h-3 w-3" />
-                                </button>
-                              </div>
+                                    }}
+                                    className="shrink-0 rounded-md p-1 text-zinc-400 transition-all hover:bg-zinc-100 hover:text-rose-600 sm:opacity-0 sm:group-hover/producto:opacity-100 dark:hover:bg-zinc-800 dark:hover:text-rose-400"
+                                    aria-label={`Eliminar ${prod.nombre} del pack`}
+                                  >
+                                    <X className="h-3 w-3" />
+                                  </button>
+                                </div>
                               );
                             })}
                           </div>
@@ -1537,7 +1562,7 @@ export default function PerfilPage() {
                   </h2>
                   <p className="text-xs text-zinc-500 dark:text-zinc-400">
                     {totalCompras > 0
-                      ? `${totalComprasFecha} ${totalComprasFecha === 1 ? "compra" : "compras"} ${fechaFiltro === todayStr ? "hoy" : new Date(fechaFiltro + "T12:00:00").toLocaleDateString("es-CL", { day: "2-digit", month: "short" })}`
+                      ? `${comprasCountPorFecha[fechaFiltro] ?? 0} ${comprasCountPorFecha[fechaFiltro] === 1 ? "compra" : "compras"} ${fechaFiltro === todayStr ? "hoy" : new Date(fechaFiltro + "T12:00:00").toLocaleDateString("es-CL", { day: "2-digit", month: "short" })}`
                       : "Tu historial aparecerá aquí"}
                   </p>
                 </div>
@@ -1565,7 +1590,11 @@ export default function PerfilPage() {
                         label: "En despensa",
                         count: enDespensaFecha,
                       },
-                      { id: "agotadas", label: "Agotadas", count: agotadosFecha },
+                      {
+                        id: "agotadas",
+                        label: "Agotadas",
+                        count: agotadosFecha,
+                      },
                     ] as { id: FilterTab; label: string; count: number }[]
                   ).map((tab) => (
                     <button
