@@ -25,9 +25,22 @@ export async function findById(
   return (rows as Producto[])[0] || null;
 }
 
+export async function findByIdAny(id: number): Promise<Producto | null> {
+  const [rows] = await pool.query("SELECT * FROM productos WHERE id = ?", [id]);
+  return (rows as Producto[])[0] || null;
+}
+
 export async function findByLugarId(lugarId: number): Promise<Producto[]> {
   const [rows] = await pool.query(
     "SELECT * FROM productos WHERE id_lugar = ? AND activo = true",
+    [lugarId],
+  );
+  return rows as Producto[];
+}
+
+export async function findByLugarIdAll(lugarId: number): Promise<Producto[]> {
+  const [rows] = await pool.query(
+    "SELECT * FROM productos WHERE id_lugar = ? ORDER BY activo DESC, nombre ASC",
     [lugarId],
   );
   return rows as Producto[];
@@ -403,14 +416,14 @@ export async function update(
     values.push(data.activo);
   }
 
-  if (fields.length === 0) return findById(id, true);
+  if (fields.length === 0) return findByIdAny(id);
 
   values.push(id);
   await pool.query(
     `UPDATE productos SET ${fields.join(", ")}, fech_act_precio = NOW() WHERE id = ?`,
     values,
   );
-  return findById(id, true);
+  return findByIdAny(id);
 }
 
 export async function deleteProducto(

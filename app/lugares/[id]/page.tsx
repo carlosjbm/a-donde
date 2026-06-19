@@ -142,6 +142,124 @@ function CoordField({
     </div>
   );
 }
+function ProductCard({
+  producto,
+  highlightedProductId,
+  productRefs,
+  user,
+  setHistoryProducto,
+  setPriceEditProducto,
+  abrirPackModal,
+  abrirModal,
+}: {
+  producto: Producto;
+  highlightedProductId: number | null;
+  productRefs: React.MutableRefObject<Record<number, HTMLDivElement | null>>;
+  user: { rol_id: number } | null;
+  setHistoryProducto: (p: Producto) => void;
+  setPriceEditProducto: (p: Producto) => void;
+  abrirPackModal: (p: Producto) => void;
+  abrirModal: (p: Producto) => void;
+}) {
+  const isHighlighted = highlightedProductId === producto.id;
+  return (
+    <div
+      ref={(el) => {
+        productRefs.current[producto.id] = el;
+      }}
+      className={`w-full overflow-hidden flex flex-col gap-3 rounded-lg border p-4 transition-all hover:bg-zinc-50 lg:flex-row lg:items-center lg:gap-4 dark:hover:bg-zinc-800/50 ${
+        isHighlighted
+          ? "border-amber-400 bg-amber-50 ring-2 ring-amber-300 ring-offset-2 dark:border-amber-500 dark:bg-amber-950/30 dark:ring-amber-500/50"
+          : "border-zinc-200 dark:border-zinc-700"
+      } ${!producto.activo ? "opacity-60" : ""}`}
+    >
+      <div
+        className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${
+          isHighlighted
+            ? "bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-300"
+            : "bg-zinc-100 text-zinc-500 dark:bg-zinc-800"
+        }`}
+      >
+        <Package className="h-5 w-5" />
+      </div>
+      <div className="min-w-0 flex-1">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="truncate font-medium text-zinc-900 dark:text-zinc-100">
+              {producto.nombre}
+            </span>
+            {!producto.activo && (
+              <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-rose-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-rose-600 dark:bg-rose-950/50 dark:text-rose-400">
+                Inactivo
+              </span>
+            )}
+            <p
+              className={`shrink-0 text-sm font-semibold ${
+                isHighlighted
+                  ? "text-amber-700 dark:text-amber-300"
+                  : "text-zinc-600 dark:text-zinc-400"
+              }`}
+            >
+              ${Number(producto.precio).toLocaleString("es-CL")}
+            </p>
+          </div>
+          <div className="flex shrink-0 items-center gap-1.5">
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                setHistoryProducto(producto);
+              }}
+              aria-label="Ver comportamiento del precio"
+              title="Ver comportamiento del precio"
+              className="flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-medium text-zinc-600 transition-colors hover:bg-blue-50 hover:text-blue-700 dark:text-zinc-400 dark:hover:bg-blue-950/40 dark:hover:text-blue-300"
+            >
+              <LineChart className="h-4 w-4" />
+              <span className="hidden sm:inline">Comportamiento</span>
+            </button>
+            {user && user.rol_id === 1 && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setPriceEditProducto(producto);
+                }}
+                aria-label="Actualizar precio"
+                title="Actualizar precio"
+                className="flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-medium text-zinc-600 transition-colors hover:bg-amber-50 hover:text-amber-700 dark:text-zinc-400 dark:hover:bg-amber-950/40 dark:hover:text-amber-300"
+              >
+                <Pencil className="h-4 w-4" />
+                <span className="hidden sm:inline">Editar</span>
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+      <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:justify-end lg:self-center">
+        <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto">
+          <Button
+            onClick={() => abrirPackModal(producto)}
+            size="sm"
+            variant="secondary"
+            className="w-full sm:w-auto"
+            aria-label={`Agregar ${producto.nombre} a un pack`}
+          >
+            <ListPlus className="h-4 w-4" />
+          </Button>
+          <Button
+            onClick={() => abrirModal(producto)}
+            size="sm"
+            className="w-full sm:w-auto"
+          >
+            <ShoppingCart className="mr-1.5 h-4 w-4" />
+            <span className="hidden xs:inline">Comprar</span>
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 import type {
   Producto,
   Lugar,
@@ -505,6 +623,24 @@ export default function LugarDetailPage() {
       )
     : productos;
 
+  const isAdmin = user && user.rol_id === 1;
+  const productosActivos = isAdmin
+    ? search.trim()
+      ? productos.filter(
+          (p) =>
+            p.activo && normalize(p.nombre).includes(normalize(search.trim())),
+        )
+      : productos.filter((p) => p.activo)
+    : [];
+  const productosInactivos = isAdmin
+    ? search.trim()
+      ? productos.filter(
+          (p) =>
+            !p.activo && normalize(p.nombre).includes(normalize(search.trim())),
+        )
+      : productos.filter((p) => !p.activo)
+    : [];
+
   return (
     <div className="mx-auto flex w-full max-w-7xl flex-col gap-6 p-4 pt-12 sm:p-6">
       <div className="flex items-start gap-4">
@@ -598,6 +734,70 @@ export default function LugarDetailPage() {
                   No hay productos registrados en este lugar.
                 </p>
               </div>
+            ) : isAdmin ? (
+              <>
+                {productosActivos.length > 0 && (
+                  <div className="mb-6">
+                    <h4 className="mb-3 text-sm font-semibold text-zinc-700 dark:text-zinc-300">
+                      Productos activos ({productosActivos.length})
+                    </h4>
+                    <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
+                      {productosActivos.map((producto) => (
+                        <ProductCard
+                          key={producto.id}
+                          producto={producto}
+                          highlightedProductId={highlightedProductId}
+                          productRefs={productRefs}
+                          user={user}
+                          setHistoryProducto={setHistoryProducto}
+                          setPriceEditProducto={setPriceEditProducto}
+                          abrirPackModal={abrirPackModal}
+                          abrirModal={abrirModal}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {productosInactivos.length > 0 && (
+                  <div>
+                    <h4 className="mb-3 text-sm font-semibold text-zinc-500 dark:text-zinc-400">
+                      Productos inactivos ({productosInactivos.length})
+                    </h4>
+                    <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
+                      {productosInactivos.map((producto) => (
+                        <ProductCard
+                          key={producto.id}
+                          producto={producto}
+                          highlightedProductId={highlightedProductId}
+                          productRefs={productRefs}
+                          user={user}
+                          setHistoryProducto={setHistoryProducto}
+                          setPriceEditProducto={setPriceEditProducto}
+                          abrirPackModal={abrirPackModal}
+                          abrirModal={abrirModal}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {productosActivos.length === 0 &&
+                  productosInactivos.length === 0 && (
+                    <div className="flex flex-col items-center gap-2 py-8 text-center">
+                      <Search className="h-10 w-10 text-zinc-300 dark:text-zinc-600" />
+                      <p className="text-sm text-zinc-500">
+                        No se encontraron productos que coincidan con &ldquo;
+                        {search}&rdquo;.
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => setSearch("")}
+                        className="text-xs font-medium text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 dark:hover:text-emerald-300"
+                      >
+                        Limpiar búsqueda
+                      </button>
+                    </div>
+                  )}
+              </>
             ) : filteredProductos.length === 0 ? (
               <div className="flex flex-col items-center gap-2 py-8 text-center">
                 <Search className="h-10 w-10 text-zinc-300 dark:text-zinc-600" />
@@ -689,12 +889,12 @@ export default function LugarDetailPage() {
                         </div>
                       </div>
                       <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:justify-end lg:self-center">
-                        <div className="flex gap-2 items-center w-full sm:w-auto">
+                        <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto">
                           <Button
                             onClick={() => abrirPackModal(producto)}
                             size="sm"
                             variant="secondary"
-                            className="shrink-0"
+                            className="w-full sm:w-auto"
                             aria-label={`Agregar ${producto.nombre} a un pack`}
                           >
                             <ListPlus className="h-4 w-4" />
@@ -702,7 +902,7 @@ export default function LugarDetailPage() {
                           <Button
                             onClick={() => abrirModal(producto)}
                             size="sm"
-                            className="shrink-0 ml-auto sm:ml-0"
+                            className="w-full sm:w-auto"
                           >
                             <ShoppingCart className="mr-1.5 h-4 w-4" />
                             <span className="hidden xs:inline">Comprar</span>
@@ -1051,13 +1251,14 @@ export default function LugarDetailPage() {
         lugarId={lugar.id}
         producto={priceEditProducto}
         onClose={() => setPriceEditProducto(null)}
-        onUpdated={(nuevoPrecio) => {
+        onUpdated={(nuevoPrecio, activo) => {
           setProductos((prev) =>
             prev.map((p) =>
               p.id === priceEditProducto?.id
                 ? {
                     ...p,
                     precio: nuevoPrecio,
+                    activo: activo ?? p.activo,
                     fech_act_precio: new Date().toISOString(),
                   }
                 : p,

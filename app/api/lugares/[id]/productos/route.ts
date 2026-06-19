@@ -2,9 +2,10 @@ import { NextRequest } from "next/server";
 import * as lugarModel from "@/models/lugar";
 import * as productModel from "@/models/producto";
 import { successResponse, errorResponse } from "@/lib/utils";
+import { requireAdmin } from "@/lib/admin-auth";
 
 export async function GET(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
@@ -20,7 +21,10 @@ export async function GET(
       return errorResponse("Lugar no encontrado", 404);
     }
 
-    const productos = await productModel.findByLugarId(lugarId);
+    const admin = await requireAdmin(request);
+    const productos = admin
+      ? await productModel.findByLugarIdAll(lugarId)
+      : await productModel.findByLugarId(lugarId);
     return successResponse(productos);
   } catch (error) {
     console.error("Error al obtener productos:", error);

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Modal } from "@/components/ui/modal";
 import { Button } from "@/components/ui/button";
 import { DollarSign, X } from "lucide-react";
@@ -11,7 +11,7 @@ interface UpdatePriceModalProps {
   lugarId: number;
   producto: Producto | null;
   onClose: () => void;
-  onUpdated: (precioNuevo: number) => void;
+  onUpdated: (precioNuevo: number, activo?: boolean) => void;
 }
 
 export function UpdatePriceModal({
@@ -23,8 +23,15 @@ export function UpdatePriceModal({
 }: UpdatePriceModalProps) {
   const [precio, setPrecio] = useState("");
   const [notas, setNotas] = useState("");
+  const [activo, setActivo] = useState(true);
   const [saving, setSaving] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
+
+  useEffect(() => {
+    if (producto) {
+      setActivo(producto.activo);
+    }
+  }, [producto]);
 
   function reset() {
     setPrecio("");
@@ -44,23 +51,31 @@ export function UpdatePriceModal({
     if (!producto) return;
     setErrorMsg("");
 
-    const precioNum = Number(precio);
-    if (!Number.isFinite(precioNum) || precioNum <= 0) {
+    const precioNum = precio.trim()
+      ? Number(precio)
+      : producto.precio;
+
+    if (precio.trim() && (!Number.isFinite(precioNum) || precioNum <= 0)) {
       setErrorMsg("Ingresa un precio válido mayor a 0");
       return;
     }
 
     setSaving(true);
     try {
+      const body: Record<string, unknown> = {
+        notas: notas.trim() || undefined,
+        activo,
+      };
+      if (precio.trim()) {
+        body.precio = precioNum;
+      }
+
       const res = await fetch(
         `/api/lugares/${lugarId}/productos/${producto.id}/precio`,
         {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            precio: precioNum,
-            notas: notas.trim() || undefined,
-          }),
+          body: JSON.stringify(body),
         }
       );
       const json = await res.json();
@@ -68,7 +83,7 @@ export function UpdatePriceModal({
         setErrorMsg(json.error ?? "No se pudo actualizar el precio");
         return;
       }
-      onUpdated(precioNum);
+      onUpdated(precioNum, activo);
       reset();
       onClose();
     } catch {
@@ -120,8 +135,7 @@ export function UpdatePriceModal({
                 min="1"
                 value={precio}
                 onChange={(e) => setPrecio(e.target.value)}
-                placeholder="0"
-                required
+                placeholder="Dejar en blanco para mantener actual"
                 className="w-full rounded-lg border border-zinc-300 bg-white py-2 pl-9 pr-3 text-sm text-zinc-900 placeholder-zinc-400 focus:border-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-500 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100 dark:placeholder-zinc-500"
               />
             </div>
@@ -140,6 +154,36 @@ export function UpdatePriceModal({
               className="rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 placeholder-zinc-400 focus:border-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-500 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100 dark:placeholder-zinc-500"
             />
           </label>
+
+          <div className="flex items-center justify-between rounded-lg border border-zinc-200 bg-white px-4 py-3 dark:border-zinc-700 dark:bg-zinc-800/50">
+            <div>
+              <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100">
+                Producto activo
+              </p>
+              <p className="text-xs text-zinc-500">
+                {activo
+                  ? "Visible para los usuarios"
+                  : "Oculto para los usuarios"}
+              </p>
+            </div>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={activo}
+              onClick={() => setActivo(!activo)}
+              className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors focus:outline-none focus:ring-2 focus:ring-zinc-500 focus:ring-offset-2 ${
+                activo
+                  ? "bg-emerald-500"
+                  : "bg-zinc-300 dark:bg-zinc-600"
+              }`}
+            >
+              <span
+                className={`inline-block h-5 w-5 transform rounded-full bg-white shadow-sm transition-transform ${
+                  activo ? "translate-x-5" : "translate-x-0"
+                }`}
+              />
+            </button>
+          </div>
 
           {errorMsg && (
             <div className="flex items-center gap-2 rounded-lg bg-red-50 p-3 text-sm text-red-600 dark:bg-red-950 dark:text-red-400">
