@@ -33,6 +33,7 @@ import {
   List,
   Trash2,
   Bell,
+  Calendar,
 } from "lucide-react";
 
 type FilterTab = "todas" | "despensa" | "agotadas";
@@ -628,6 +629,11 @@ export default function PerfilPage() {
   const [pendingAgotado, setPendingAgotado] = useState<Set<number>>(new Set());
   const [filter, setFilter] = useState<FilterTab>("todas");
   const [search, setSearch] = useState("");
+  const todayStr = useMemo(
+    () => new Date().toISOString().split("T")[0],
+    [],
+  );
+  const [fechaFiltro, setFechaFiltro] = useState(todayStr);
 
   const [descripcion, setDescripcion] = useState("");
   const [valor, setValor] = useState("");
@@ -703,8 +709,23 @@ export default function PerfilPage() {
         ? "Vas bien, con calma"
         : "Cuidado, casi al límite";
 
+  const comprasFecha = useMemo(
+    () =>
+      compras.filter((c) => {
+        const d = c.create_at
+          ? new Date(c.create_at).toISOString().split("T")[0]
+          : "";
+        return d === fechaFiltro;
+      }),
+    [compras, fechaFiltro],
+  );
+
+  const totalComprasFecha = comprasFecha.length;
+  const enDespensaFecha = comprasFecha.filter((c) => !c.agotado).length;
+  const agotadosFecha = comprasFecha.filter((c) => c.agotado).length;
+
   const filteredCompras = useMemo(() => {
-    let list = compras;
+    let list = comprasFecha;
     if (filter === "despensa") list = list.filter((c) => !c.agotado);
     if (filter === "agotadas") list = list.filter((c) => c.agotado);
     if (search.trim()) {
@@ -716,7 +737,7 @@ export default function PerfilPage() {
       );
     }
     return list;
-  }, [compras, filter, search]);
+  }, [comprasFecha, filter, search]);
 
   const showToast = useCallback((type: "success" | "error", msg: string) => {
     setToast({ type, msg });
@@ -1516,7 +1537,7 @@ export default function PerfilPage() {
                   </h2>
                   <p className="text-xs text-zinc-500 dark:text-zinc-400">
                     {totalCompras > 0
-                      ? `${totalCompras} ${totalCompras === 1 ? "compra registrada" : "compras registradas"}`
+                      ? `${totalComprasFecha} ${totalComprasFecha === 1 ? "compra" : "compras"} ${fechaFiltro === todayStr ? "hoy" : new Date(fechaFiltro + "T12:00:00").toLocaleDateString("es-CL", { day: "2-digit", month: "short" })}`
                       : "Tu historial aparecerá aquí"}
                   </p>
                 </div>
@@ -1538,13 +1559,13 @@ export default function PerfilPage() {
                 <div className="flex items-center gap-1 rounded-lg border border-zinc-200/70 bg-zinc-50 p-1 dark:border-zinc-800/60 dark:bg-zinc-900/40">
                   {(
                     [
-                      { id: "todas", label: "Todas", count: totalCompras },
+                      { id: "todas", label: "Todas", count: totalComprasFecha },
                       {
                         id: "despensa",
                         label: "En despensa",
-                        count: enDespensa,
+                        count: enDespensaFecha,
                       },
-                      { id: "agotadas", label: "Agotadas", count: agotados },
+                      { id: "agotadas", label: "Agotadas", count: agotadosFecha },
                     ] as { id: FilterTab; label: string; count: number }[]
                   ).map((tab) => (
                     <button
@@ -1571,15 +1592,35 @@ export default function PerfilPage() {
                   ))}
                 </div>
 
-                <div className="relative">
-                  <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-zinc-400" />
-                  <input
-                    type="text"
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                    placeholder="Buscar compra…"
-                    className="w-full rounded-lg border border-zinc-200/70 bg-zinc-50 py-1.5 pl-8 pr-3 text-xs text-zinc-900 placeholder-zinc-400 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 sm:w-56 dark:border-zinc-800/60 dark:bg-zinc-900/40 dark:text-zinc-100 dark:placeholder-zinc-500"
-                  />
+                <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1.5 rounded-lg border border-zinc-200/70 bg-zinc-50 px-2.5 py-1.5 dark:border-zinc-800/60 dark:bg-zinc-900/40">
+                    <Calendar className="h-3.5 w-3.5 shrink-0 text-zinc-500" />
+                    <input
+                      type="date"
+                      value={fechaFiltro}
+                      onChange={(e) => setFechaFiltro(e.target.value)}
+                      className="w-[130px] border-0 bg-transparent p-0 text-xs font-medium text-zinc-900 focus:outline-none focus:ring-0 dark:text-zinc-100 [&::-webkit-calendar-picker-indicator]:cursor-pointer"
+                    />
+                    {fechaFiltro !== todayStr && (
+                      <button
+                        type="button"
+                        onClick={() => setFechaFiltro(todayStr)}
+                        className="ml-1 rounded-md px-1.5 py-0.5 text-[10px] font-semibold text-emerald-600 transition-colors hover:bg-emerald-50 dark:text-emerald-400 dark:hover:bg-emerald-950/40"
+                      >
+                        Hoy
+                      </button>
+                    )}
+                  </div>
+                  <div className="relative">
+                    <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-zinc-400" />
+                    <input
+                      type="text"
+                      value={search}
+                      onChange={(e) => setSearch(e.target.value)}
+                      placeholder="Buscar compra…"
+                      className="w-full rounded-lg border border-zinc-200/70 bg-zinc-50 py-1.5 pl-8 pr-3 text-xs text-zinc-900 placeholder-zinc-400 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 sm:w-44 dark:border-zinc-800/60 dark:bg-zinc-900/40 dark:text-zinc-100 dark:placeholder-zinc-500"
+                    />
+                  </div>
                 </div>
               </div>
             )}
