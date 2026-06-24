@@ -1,24 +1,47 @@
-# Agent Instructions for a-done
+# a-donde — Agent Instructions
 
-## Development
-- Start dev server: `npm run dev` (or pnpm/yarn/bun dev)
-- The app entrypoint is `app/page.tsx`
-- Tailwind CSS is configured; no additional setup needed
+## Stack
+- Next.js 16 (App Router), React 19, Tailwind CSS 4
+- MySQL via `mysql2/promise` (raw SQL, no ORM)
+- Auth: bcryptjs + jose (JWT HS256) + refresh tokens in DB
+- Validation: Zod
 
-## Linting
-- Run ESLint: `npm run lint`
-- Uses `eslint-config-next` with Next.js recommended rules
+## Setup
+```bash
+npm install
+npm run dev
 
-## Building
-- Build for production: `npm run build`
-- Outputs to `.next` directory
-- Start production server: `npm run start`
+Generate `AUTH_SECRET`: `node -e "console.log(require('crypto').randomBytes(64).toString('hex'))"`
 
-## Type Checking
-- Type checking occurs during dev and build via Next.js and TypeScript
-- For standalone type check: `npx tsc --noEmit`
+## Commands
+| Command | Purpose |
+|---------|---------|
+| `npm run dev` | Dev server |
+| `npm run build` | Production build → `.next/` |
+| `npm run start` | Serve production build |
+| `npm run lint` | ESLint (flat config, next/core-web-vitals + TS) |
+| `npx tsc --noEmit` | Type check (strict mode) |
 
-## Notes
-- Lockfile is `package-lock.json` (npm), but project supports npm, yarn, pnpm, bun
-- `pnpm-workspace.yaml` present but repository is a single package
-- No test framework configured in package.json
+No test framework configured.
+
+## Database
+- Connection pool in `lib/db.ts` (limit 5, SSL auto-enabled for non-localhost hosts)
+- Models in `models/` — hand-written SQL via `pool.query()`
+- Schema & seed scripts in `scripts/` (SQL files + JS migration helpers)
+
+## Auth architecture
+- **Login flow**: Zod validate → `bcrypt.compare` → `jose.SignJWT` (HS256, 15min) → `crypto.randomBytes(64)` refresh token → store in `sesiones` table → set httpOnly cookies (`access_token` path `/`, `refresh_token` path `/api/auth`)
+- **Middleware** (`middleware.ts`): Protects `/api/*`, `/perfil/*`, `/admin/*`. Public routes: `/login`, `/register`, `/`, `/api/auth/login`, `/api/auth/register`, `/api/auth/refresh`, `/api/productos/buscar`, `/api/lugares`. Verifies access_token cookie with `jose.jwtVerify`, injects `x-user-id`/`x-user-email` headers.
+- **Model layer** (`models/sesion.ts`): Sessions stored in `sesiones` table (`id`, `usuario_id`, `refresh_token`, `expires_at`, `created_at`). `refresh_token VARCHAR(128) NOT NULL UNIQUE`.
+
+## API conventions
+All routes respond with `{ success: boolean, data?: ..., error?: string }` (helpers in `lib/utils.ts`).
+
+## Netlify deployment
+Configured via `netlify.toml` + `@netlify/plugin-nextjs`.
+
+## Framework quirks
+- `next.config.ts` has `serverExternalPackages: ["mysql2"]` — mysql2 stays server-side
+- `allowedDevOrigins` configured for LAN access on several IPs
+- `eslint.config.mjs` is flat config (not `.eslintrc`)
+- PostCSS with `@tailwindcss/postcss` (Tailwind v4)

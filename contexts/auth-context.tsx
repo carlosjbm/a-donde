@@ -44,7 +44,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     refreshUser().finally(() => setLoading(false));
   }, [refreshUser]);
-
+  
   const login = useCallback(async (email: string, password: string) => {
     const u = await apiLogin(email, password);
     setUser(u);

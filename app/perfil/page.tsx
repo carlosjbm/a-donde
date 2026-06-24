@@ -404,7 +404,7 @@ function PurchaseCard({
                   agotado ? "bg-zinc-500" : "bg-emerald-500"
                 }`}
               />
-              {agotado ? "Agotado" : "En despensa"}
+              {agotado ? "Agotado" : "Despensa"}
             </span>
           </div>
           <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-zinc-500 dark:text-zinc-400">
@@ -630,7 +630,8 @@ export default function PerfilPage() {
   const [filter, setFilter] = useState<FilterTab>("todas");
   const [search, setSearch] = useState("");
   const todayStr = useMemo(() => new Date().toISOString().split("T")[0], []);
-  const [fechaFiltro, setFechaFiltro] = useState(todayStr);
+  const [fechaInicio, setFechaInicio] = useState(todayStr);
+  const [fechaFin, setFechaFin] = useState("");
 
   const [descripcion, setDescripcion] = useState("");
   const [valor, setValor] = useState("");
@@ -714,25 +715,18 @@ export default function PerfilPage() {
         const d = c.create_at
           ? new Date(c.create_at).toISOString().split("T")[0]
           : "";
-        return d === fechaFiltro;
+        if (!d) return false;
+        if (fechaFin) {
+          return d >= fechaInicio && d <= fechaFin;
+        }
+        return d === fechaInicio;
       }),
-    [compras, fechaFiltro],
+    [compras, fechaInicio, fechaFin],
   );
 
   const totalComprasFecha = comprasFecha.length;
   const enDespensaFecha = comprasFecha.filter((c) => !c.agotado).length;
   const agotadosFecha = comprasFecha.filter((c) => c.agotado).length;
-
-  const comprasCountPorFecha = useMemo(() => {
-    const counts: Record<string, number> = {};
-    for (const c of compras) {
-      const d = c.create_at
-        ? new Date(c.create_at).toISOString().split("T")[0]
-        : "";
-      if (d) counts[d] = (counts[d] || 0) + 1;
-    }
-    return counts;
-  }, [compras]);
 
   const filteredCompras = useMemo(() => {
     let list = comprasFecha;
@@ -995,7 +989,7 @@ export default function PerfilPage() {
                 />
                 <KpiCard
                   icon={Bookmark}
-                  label="En despensa"
+                  label="Despensa"
                   value={String(enDespensa)}
                   theme="indigo"
                   sub={
@@ -1184,7 +1178,7 @@ export default function PerfilPage() {
                     <div className="rounded-xl bg-emerald-50 p-3 dark:bg-emerald-950/40">
                       <div className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-300">
                         <Bookmark className="h-3 w-3" />
-                        En despensa
+                        Despensa
                       </div>
                       <p className="mt-1.5 text-2xl font-bold text-emerald-700 dark:text-emerald-300">
                         {enDespensa}
@@ -1562,7 +1556,7 @@ export default function PerfilPage() {
                   </h2>
                   <p className="text-xs text-zinc-500 dark:text-zinc-400">
                     {totalCompras > 0
-                      ? `${comprasCountPorFecha[fechaFiltro] ?? 0} ${comprasCountPorFecha[fechaFiltro] === 1 ? "compra" : "compras"} ${fechaFiltro === todayStr ? "hoy" : new Date(fechaFiltro + "T12:00:00").toLocaleDateString("es-CL", { day: "2-digit", month: "short" })}`
+                      ? `${comprasFecha.length} ${comprasFecha.length === 1 ? "compra" : "compras"} ${fechaFin ? `del ${new Date(fechaInicio + "T12:00:00").toLocaleDateString("es-CL", { day: "2-digit", month: "short" })} al ${new Date(fechaFin + "T12:00:00").toLocaleDateString("es-CL", { day: "2-digit", month: "short" })}` : fechaInicio === todayStr ? "hoy" : new Date(fechaInicio + "T12:00:00").toLocaleDateString("es-CL", { day: "2-digit", month: "short" })}`
                       : "Tu historial aparecerá aquí"}
                   </p>
                 </div>
@@ -1587,7 +1581,7 @@ export default function PerfilPage() {
                       { id: "todas", label: "Todas", count: totalComprasFecha },
                       {
                         id: "despensa",
-                        label: "En despensa",
+                        label: "Despensa",
                         count: enDespensaFecha,
                       },
                       {
@@ -1621,19 +1615,31 @@ export default function PerfilPage() {
                   ))}
                 </div>
 
-                <div className="flex items-center gap-2">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
                   <div className="flex items-center gap-1.5 rounded-lg border border-zinc-200/70 bg-zinc-50 px-2.5 py-1.5 dark:border-zinc-800/60 dark:bg-zinc-900/40">
-                    <Calendar className="h-3.5 w-3.5 shrink-0 text-zinc-500" />
+                    
                     <input
                       type="date"
-                      value={fechaFiltro}
-                      onChange={(e) => setFechaFiltro(e.target.value)}
-                      className="w-[130px] border-0 bg-transparent p-0 text-xs font-medium text-zinc-900 focus:outline-none focus:ring-0 dark:text-zinc-100 [&::-webkit-calendar-picker-indicator]:cursor-pointer"
+                      value={fechaInicio}
+                      onChange={(e) => setFechaInicio(e.target.value)}
+                      className="w-[120px] border-0 bg-transparent p-0 text-xs font-medium text-zinc-900 focus:outline-none focus:ring-0 dark:text-zinc-100 [&::-webkit-calendar-picker-indicator]:cursor-pointer"
+                      title="Fecha inicio"
                     />
-                    {fechaFiltro !== todayStr && (
+                    <span className="text-xs text-zinc-400">–</span>
+                    <input
+                      type="date"
+                      value={fechaFin}
+                      onChange={(e) => setFechaFin(e.target.value)}
+                      className="w-[120px] border-0 bg-transparent p-0 text-xs font-medium text-zinc-900 focus:outline-none focus:ring-0 dark:text-zinc-100 [&::-webkit-calendar-picker-indicator]:cursor-pointer"
+                      title="Fecha fin"
+                    />
+                    {(fechaInicio !== todayStr || fechaFin) && (
                       <button
                         type="button"
-                        onClick={() => setFechaFiltro(todayStr)}
+                        onClick={() => {
+                          setFechaInicio(todayStr);
+                          setFechaFin("");
+                        }}
                         className="ml-1 rounded-md px-1.5 py-0.5 text-[10px] font-semibold text-emerald-600 transition-colors hover:bg-emerald-50 dark:text-emerald-400 dark:hover:bg-emerald-950/40"
                       >
                         Hoy
