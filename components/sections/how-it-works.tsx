@@ -1,26 +1,26 @@
-import { ClipboardList, MapPin, PiggyBank } from "lucide-react";
+import { Store, ClipboardList, Users } from "lucide-react";
 
 const steps = [
   {
     number: "1",
-    title: "Define tu presupuesto",
+    title: "Administra tus lugares",
     description:
-      "Establece cuánto planeas gastar este mes en productos de primera necesidad.",
-    icon: ClipboardList,
+      "Registra tus tiendas de confianza, sus productos y precios reales. Entre más compartas, más ayudas a tu comunidad a encontrar dónde comprar mejor.",
+    icon: Store,
   },
   {
     number: "2",
-    title: "Compara precios y distancia",
+    title: "Planifica tu despensa",
     description:
-      "Explora los precios de diferentes lugares cerca de ti y encuentra las mejores ofertas.",
-    icon: MapPin,
+      "Define tu presupuesto mensual, organiza tus productos esenciales y crea packs personalizados para tus próximas compras. Todo bajo tu control.",
+    icon: ClipboardList,
   },
   {
     number: "3",
-    title: "Ahorra con inteligencia",
+    title: "Colabora y ahorra",
     description:
-      "Elige dónde comprar combinando los mejores precios con la cercanía a tu ubicación.",
-    icon: PiggyBank,
+      "Descubre precios registrados por otros usuarios, encuentra ofertas cerca de ti y ahorra en equipo. Todos podemos ayudarnos a comprar mejor.",
+    icon: Users,
   },
 ];
 
@@ -32,7 +32,7 @@ export function HowItWorks() {
           Cómo funciona
         </h2>
         <p className="mt-2 text-zinc-600 dark:text-zinc-400">
-          En tres pasos simples empieza a ahorrar en tus compras
+          En tres pasos empieza a colaborar con tu comunidad y ahorra en tus compras
         </p>
       </div>
 

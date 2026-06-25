@@ -7,7 +7,9 @@ import { Switch } from "@/components/ui/switch";
 import { Modal } from "@/components/ui/modal";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, FormEvent, useCallback, useMemo } from "react";
-import type { Presupuesto, CompraConProducto, UserPack } from "@/types";
+import dynamic from "next/dynamic";
+const MapPicker = dynamic(() => import("@/components/map-picker"), { ssr: false });
+import type { Presupuesto, CompraConProducto, UserPack, Lugar, Categoria } from "@/types";
 import {
   Mail,
   Shield,
@@ -34,6 +36,7 @@ import {
   Trash2,
   Bell,
   Calendar,
+  MapPin,
 } from "lucide-react";
 
 type FilterTab = "todas" | "despensa" | "agotadas";
@@ -625,6 +628,7 @@ export default function PerfilPage() {
   const [presupuestos, setPresupuestos] = useState<Presupuesto[]>([]);
   const [compras, setCompras] = useState<CompraConProducto[]>([]);
   const [packs, setPacks] = useState<UserPack[]>([]);
+  const [misLugares, setMisLugares] = useState<Lugar[]>([]);
   const [loadingData, setLoadingData] = useState(true);
   const [pendingAgotado, setPendingAgotado] = useState<Set<number>>(new Set());
   const [filter, setFilter] = useState<FilterTab>("todas");
@@ -649,6 +653,22 @@ export default function PerfilPage() {
     msg: string;
   } | null>(null);
 
+  const [showNewLugar, setShowNewLugar] = useState(false);
+  const [newLugarNombre, setNewLugarNombre] = useState("");
+  const [newLugarDescripcion, setNewLugarDescripcion] = useState("");
+  const [newLugarDireccion, setNewLugarDireccion] = useState("");
+  const [newLugarLat, setNewLugarLat] = useState("");
+  const [newLugarLng, setNewLugarLng] = useState("");
+  const [newLugarTransferencia, setNewLugarTransferencia] = useState(false);
+  const [creatingLugar, setCreatingLugar] = useState(false);
+  const [createLugarError, setCreateLugarError] = useState("");
+  const [productPlaceTarget, setProductPlaceTarget] = useState<Lugar | null>(null);
+  const [newProductName, setNewProductName] = useState("");
+  const [newProductPrice, setNewProductPrice] = useState("");
+  const [newProductCateg, setNewProductCateg] = useState("");
+  const [categorias, setCategorias] = useState<Categoria[]>([]);
+  const [addingProductToPlace, setAddingProductToPlace] = useState(false);
+
   useEffect(() => {
     if (!loading && !user) {
       router.push("/login?redirect=/perfil");
@@ -661,11 +681,13 @@ export default function PerfilPage() {
       fetch("/api/presupuestos/mine").then((r) => r.json()),
       fetch("/api/compras/mine").then((r) => r.json()),
       fetch("/api/packs/mine").then((r) => r.json()),
+      fetch("/api/lugares/mine").then((r) => r.json()),
     ])
-      .then(([presJson, compJson, packJson]) => {
+      .then(([presJson, compJson, packJson, lugJson]) => {
         if (presJson.success) setPresupuestos(presJson.data);
         if (compJson.success) setCompras(compJson.data);
         if (packJson.success) setPacks(packJson.data);
+        if (lugJson.success) setMisLugares(lugJson.data);
       })
       .catch(() => {})
       .finally(() => setLoadingData(false));
@@ -854,6 +876,80 @@ export default function PerfilPage() {
       showToast("error", "Error al desactivar presupuesto");
     } finally {
       setDeactivatingPresupuesto(null);
+    }
+  }
+
+  async function handleCreateLugar(e: FormEvent) {
+    e.preventDefault();
+    setCreateLugarError("");
+    if (!newLugarNombre.trim() || !newLugarDireccion.trim()) {
+      setCreateLugarError("Nombre y dirección son obligatorios");
+      return;
+    }
+    setCreatingLugar(true);
+    try {
+      const body: Record<string, unknown> = {
+        nombre: newLugarNombre.trim(),
+        descripcion: newLugarDescripcion.trim(),
+        direccion: newLugarDireccion.trim(),
+        transferencia: newLugarTransferencia,
+      };
+      if (newLugarLat.trim()) body.latitud = Number(newLugarLat);
+      if (newLugarLng.trim()) body.longitud = Number(newLugarLng);
+      const res = await fetch("/api/lugares", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      const json = await res.json();
+      if (json.success) {
+        setMisLugares((prev) => [...prev, json.data]);
+        setNewLugarNombre("");
+        setNewLugarDescripcion("");
+        setNewLugarDireccion("");
+        setNewLugarLat("");
+        setNewLugarLng("");
+        setNewLugarTransferencia(false);
+        setShowNewLugar(false);
+        showToast("success", "Lugar creado");
+      } else {
+        setCreateLugarError(json.error);
+      }
+    } catch {
+      setCreateLugarError("Error al crear lugar");
+    } finally {
+      setCreatingLugar(false);
+    }
+  }
+
+  async function handleAddProductToPlace(e: FormEvent) {
+    e.preventDefault();
+    if (!productPlaceTarget || !newProductName.trim() || !newProductPrice.trim() || !newProductCateg) return;
+    setAddingProductToPlace(true);
+    try {
+      const res = await fetch(`/api/lugares/${productPlaceTarget.id}/productos`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          nombre: newProductName.trim(),
+          precio: Number(newProductPrice),
+          id_categ: Number(newProductCateg),
+        }),
+      });
+      const json = await res.json();
+      if (json.success) {
+        setNewProductName("");
+        setNewProductPrice("");
+        setNewProductCateg("");
+        setProductPlaceTarget(null);
+        showToast("success", `"${json.data.nombre}" agregado a ${productPlaceTarget.nombre}`);
+      } else {
+        showToast("error", json.error);
+      }
+    } catch {
+      showToast("error", "Error al crear producto");
+    } finally {
+      setAddingProductToPlace(false);
     }
   }
 
@@ -1539,10 +1635,133 @@ export default function PerfilPage() {
           </div>
         </section>
 
-        {/* COMPRAS */}
+        {/* MIS LUGARES */}
         <section
           className="overflow-hidden rounded-2xl border border-zinc-200/70 bg-white shadow-sm dark:border-zinc-800/60 dark:bg-zinc-950"
           style={{ animation: "fadeInUp 0.5s ease 0.25s both" }}
+        >
+          <div className="flex items-center justify-between gap-3 border-b border-zinc-200/70 px-5 py-4 dark:border-zinc-800/60 sm:px-6">
+            <div className="flex items-center gap-2.5">
+              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300">
+                <Store className="h-4.5 w-4.5" />
+              </div>
+              <div>
+                <h2 className="text-base font-semibold text-zinc-900 dark:text-zinc-100">
+                  Mis lugares
+                </h2>
+                <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                  {misLugares.length > 0
+                    ? `${misLugares.length} ${misLugares.length === 1 ? "lugar" : "lugares"} registrados`
+                    : "Crea y administra tus lugares"}
+                </p>
+              </div>
+            </div>
+            <Button
+              onClick={() => setShowNewLugar(true)}
+              size="sm"
+              variant="primary"
+            >
+              <Plus className="mr-1 h-3.5 w-3.5" />
+              Nuevo lugar
+            </Button>
+          </div>
+
+          <div className="p-5 sm:p-6">
+            {loadingData ? (
+              <SkeletonList rows={2} />
+            ) : misLugares.length === 0 ? (
+              <div className="flex flex-col items-center gap-3 py-8 text-center">
+                <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-400">
+                  <Store className="h-7 w-7" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                    Aún no tienes lugares
+                  </p>
+                  <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
+                    Crea un lugar para empezar a registrar productos y precios.
+                  </p>
+                </div>
+                <Button
+                  size="sm"
+                  onClick={() => setShowNewLugar(true)}
+                  className="mt-1"
+                >
+                  <Plus className="mr-1 h-3.5 w-3.5" />
+                  Crear lugar
+                </Button>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {misLugares.map((lugar, i) => (
+                  <div
+                    key={lugar.id}
+                    className="group overflow-hidden rounded-xl border border-zinc-200/70 bg-white transition-all hover:border-zinc-300 hover:shadow-sm dark:border-zinc-800/60 dark:bg-zinc-900/40 dark:hover:border-zinc-700"
+                    style={{
+                      animation: "fadeInUp 0.4s ease both",
+                      animationDelay: `${i * 60}ms`,
+                    }}
+                  >
+                    <div className="flex items-center gap-3 px-4 py-3 sm:px-5">
+                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-emerald-100 text-emerald-700 transition-transform group-hover:scale-110 group-hover:rotate-3 dark:bg-emerald-950/60 dark:text-emerald-300">
+                        <Store className="h-4.5 w-4.5" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-semibold text-zinc-900 dark:text-zinc-100">
+                          {lugar.nombre}
+                        </p>
+                        <p className="truncate text-xs text-zinc-500 dark:text-zinc-400">
+                          {lugar.direccion}
+                        </p>
+                      </div>
+                      <div className="flex shrink-0 items-center gap-2">
+                        <span
+                          className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium ${
+                            lugar.transferencia
+                              ? "bg-sky-100 text-sky-700 dark:bg-sky-950/60 dark:text-sky-300"
+                              : "bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400"
+                          }`}
+                        >
+                          {lugar.transferencia ? "Transferencia" : "Efectivo"}
+                        </span>
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setProductPlaceTarget(lugar);
+                            setNewProductName("");
+                            setNewProductPrice("");
+                            setNewProductCateg("");
+                            fetch("/api/categorias")
+                              .then((r) => r.json())
+                              .then((j) => { if (j.success) setCategorias(j.data); })
+                              .catch(() => {});
+                          }}
+                          title="Agregar producto"
+                        >
+                          <Package className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          onClick={() => router.push(`/lugares/${lugar.id}`)}
+                        >
+                          <ArrowRight className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </section>
+
+        {/* COMPRAS */}
+        <section
+          className="overflow-hidden rounded-2xl border border-zinc-200/70 bg-white shadow-sm dark:border-zinc-800/60 dark:bg-zinc-950"
+          style={{ animation: "fadeInUp 0.5s ease 0.3s both" }}
         >
           <div className="flex flex-col gap-3 border-b border-zinc-200/70 px-5 py-4 dark:border-zinc-800/60 sm:px-6">
             <div className="flex flex-wrap items-center justify-between gap-3">
@@ -1856,6 +2075,262 @@ export default function PerfilPage() {
             </div>
           </form>
         </div>
+      </Modal>
+
+      <Modal
+        open={showNewLugar}
+        onClose={() => {
+          if (creatingLugar) return;
+          setShowNewLugar(false);
+          setNewLugarNombre("");
+          setNewLugarDescripcion("");
+          setNewLugarDireccion("");
+          setNewLugarLat("");
+          setNewLugarLng("");
+          setNewLugarTransferencia(false);
+          setCreateLugarError("");
+        }}
+      >
+        <form
+          onSubmit={handleCreateLugar}
+          className="flex flex-col gap-3 sm:gap-4"
+        >
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-100 text-emerald-600 dark:bg-emerald-950/60 dark:text-emerald-400">
+              <Plus className="h-5 w-5" />
+            </div>
+            <div>
+              <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">
+                Nuevo lugar
+              </h3>
+              <p className="text-sm text-zinc-500">
+                Registra un nuevo lugar de compras.
+              </p>
+            </div>
+          </div>
+          <div>
+            <label className="mb-1 block text-xs font-medium text-zinc-600 dark:text-zinc-400">
+              Nombre
+            </label>
+            <input
+              type="text"
+              value={newLugarNombre}
+              onChange={(e) => setNewLugarNombre(e.target.value)}
+              className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 placeholder-zinc-400 focus:border-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-500 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100"
+              placeholder="Nombre del lugar"
+              autoFocus
+            />
+          </div>
+          <div>
+            <label className="mb-1 block text-xs font-medium text-zinc-600 dark:text-zinc-400">
+              Dirección
+            </label>
+            <input
+              type="text"
+              value={newLugarDireccion}
+              onChange={(e) => setNewLugarDireccion(e.target.value)}
+              className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 placeholder-zinc-400 focus:border-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-500 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100"
+              placeholder="Dirección del lugar"
+            />
+          </div>
+          <div>
+            <label className="mb-1 block text-xs font-medium text-zinc-600 dark:text-zinc-400">
+              Descripción{" "}
+              <span className="font-normal text-zinc-400">(opcional)</span>
+            </label>
+            <input
+              type="text"
+              value={newLugarDescripcion}
+              onChange={(e) => setNewLugarDescripcion(e.target.value)}
+              className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 placeholder-zinc-400 focus:border-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-500 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100"
+              placeholder="Breve descripción"
+            />
+          </div>
+          <MapPicker
+            lat={newLugarLat ? Number(newLugarLat) : null}
+            lng={newLugarLng ? Number(newLugarLng) : null}
+            onChange={(lat, lng, address) => {
+              setNewLugarLat(String(lat));
+              setNewLugarLng(String(lng));
+              if (address) setNewLugarDireccion(address);
+            }}
+          />
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div>
+              <label className="mb-1 block text-xs font-medium text-zinc-600 dark:text-zinc-400">
+                Latitud{" "}
+                <span className="font-normal text-zinc-400">(opcional)</span>
+              </label>
+              <input
+                type="text"
+                value={newLugarLat}
+                onChange={(e) => setNewLugarLat(e.target.value)}
+                className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 placeholder-zinc-400 focus:border-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-500 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100"
+                placeholder="-33.456"
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-medium text-zinc-600 dark:text-zinc-400">
+                Longitud{" "}
+                <span className="font-normal text-zinc-400">(opcional)</span>
+              </label>
+              <input
+                type="text"
+                value={newLugarLng}
+                onChange={(e) => setNewLugarLng(e.target.value)}
+                className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 placeholder-zinc-400 focus:border-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-500 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100"
+                placeholder="-70.650"
+              />
+            </div>
+          </div>
+          <label className="flex cursor-pointer items-center gap-2">
+            <input
+              type="checkbox"
+              checked={newLugarTransferencia}
+              onChange={(e) => setNewLugarTransferencia(e.target.checked)}
+              className="h-4 w-4 rounded border-zinc-300 text-zinc-900 focus:ring-zinc-500 dark:border-zinc-600"
+            />
+            <span className="text-sm text-zinc-700 dark:text-zinc-300">
+              Acepta pago electrónico
+            </span>
+          </label>
+          {createLugarError && (
+            <div className="flex items-center gap-2 rounded-lg bg-red-50 p-3 text-sm text-red-600 dark:bg-red-950 dark:text-red-400">
+              <AlertCircle className="h-4 w-4 shrink-0" />
+              {createLugarError}
+            </div>
+          )}
+          <div className="flex gap-3">
+            <Button
+              variant="secondary"
+              type="button"
+              className="flex-1"
+              onClick={() => setShowNewLugar(false)}
+              disabled={creatingLugar}
+            >
+              Cancelar
+            </Button>
+            <Button className="flex-1" type="submit" loading={creatingLugar}>
+              <Plus className="mr-1.5 h-4 w-4" />
+              Crear
+            </Button>
+          </div>
+        </form>
+      </Modal>
+
+      <Modal
+        open={!!productPlaceTarget}
+        onClose={() => {
+          if (addingProductToPlace) return;
+          setProductPlaceTarget(null);
+          setNewProductName("");
+          setNewProductPrice("");
+          setNewProductCateg("");
+        }}
+      >
+        {productPlaceTarget && (
+          <form
+            onSubmit={handleAddProductToPlace}
+            className="flex flex-col gap-3 sm:gap-4"
+          >
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-violet-100 text-violet-600 dark:bg-violet-950/60 dark:text-violet-400">
+                  <Package className="h-5 w-5" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">
+                    Agregar producto
+                  </h3>
+                  <p className="text-sm text-zinc-500">
+                    {productPlaceTarget.nombre}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setProductPlaceTarget(null);
+                  setNewProductName("");
+                  setNewProductPrice("");
+                  setNewProductCateg("");
+                }}
+                disabled={addingProductToPlace}
+                className="rounded-lg p-1.5 text-zinc-400 transition-colors hover:bg-zinc-100 hover:text-zinc-700 disabled:opacity-50 dark:hover:bg-zinc-800 dark:hover:text-zinc-200"
+                aria-label="Cerrar"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-medium text-zinc-600 dark:text-zinc-400">
+                Nombre del producto
+              </label>
+              <input
+                type="text"
+                value={newProductName}
+                onChange={(e) => setNewProductName(e.target.value)}
+                className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 placeholder-zinc-400 focus:border-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-500 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100"
+                placeholder="Ej: Leche entera"
+                autoFocus
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-medium text-zinc-600 dark:text-zinc-400">
+                Precio
+              </label>
+              <input
+                type="number"
+                min={1}
+                value={newProductPrice}
+                onChange={(e) => setNewProductPrice(e.target.value)}
+                className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 placeholder-zinc-400 focus:border-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-500 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100"
+                placeholder="Ej: 1500"
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-medium text-zinc-600 dark:text-zinc-400">
+                Categoría
+              </label>
+              <select
+                value={newProductCateg}
+                onChange={(e) => setNewProductCateg(e.target.value)}
+                className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 focus:border-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-500 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100"
+              >
+                <option value="">Seleccionar categoría</option>
+                {categorias.map((cat) => (
+                  <option key={cat.id} value={cat.id}>
+                    {cat.nombre}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="flex gap-3">
+              <Button
+                variant="secondary"
+                type="button"
+                className="flex-1"
+                onClick={() => {
+                  setProductPlaceTarget(null);
+                  setNewProductName("");
+                  setNewProductPrice("");
+                  setNewProductCateg("");
+                }}
+                disabled={addingProductToPlace}
+              >
+                Cancelar
+              </Button>
+              <Button
+                className="flex-1"
+                type="submit"
+                loading={addingProductToPlace}
+              >
+                <Plus className="mr-1.5 h-4 w-4" />
+                Crear
+              </Button>
+            </div>
+          </form>
+        )}
       </Modal>
 
       {toast && (

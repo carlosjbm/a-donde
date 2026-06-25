@@ -19,6 +19,7 @@ export interface Lugar {
   updated_at: string;
   transferencia: boolean;
   estrellas: number | null;
+  usuario_id: number | null;
 }
 
 export interface Categoria {
@@ -121,6 +122,8 @@ export interface SugerenciaProducto {
   id: number;
   nombre: string;
   precio: number;
+  precio_original: number | null;
+  descuento_porcentaje: number | null;
   imagen: string | null;
   escencial: boolean;
   lugar_id: number;

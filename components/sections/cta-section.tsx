@@ -6,11 +6,11 @@ export function CTASection() {
     <section className="border-t border-zinc-200 py-16 dark:border-zinc-800 sm:py-24">
       <div className="mx-auto max-w-3xl px-4 text-center">
         <h2 className="text-2xl font-bold tracking-tight text-zinc-900 sm:text-3xl dark:text-zinc-50">
-          Empieza a ahorrar hoy
+          Únete a la comunidad
         </h2>
         <p className="mt-3 text-lg text-zinc-600 dark:text-zinc-400">
-          Regístrate gratis y descubre los mejores lugares para hacer tus
-          compras mensuales al mejor precio.
+          Regístrate gratis y empieza a compartir los precios de tus lugares
+          favoritos. Juntos podemos ayudarnos a encontrar dónde comprar mejor.
         </p>
         <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
           <Link

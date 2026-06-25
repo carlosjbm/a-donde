@@ -2,7 +2,8 @@ import { NextRequest } from "next/server";
 import * as lugarModel from "@/models/lugar";
 import * as productModel from "@/models/producto";
 import { successResponse, errorResponse } from "@/lib/utils";
-import { requireAdmin } from "@/lib/admin-auth";
+import { canManageLugar } from "@/lib/lugar-auth";
+import { getAuthUser } from "@/lib/lugar-auth";
 
 export async function GET(
   request: NextRequest,
@@ -21,8 +22,9 @@ export async function GET(
       return errorResponse("Lugar no encontrado", 404);
     }
 
-    const admin = await requireAdmin(request);
-    const productos = admin
+    const user = await getAuthUser(request);
+    const canSeeAll = user && (user.isAdmin || lugar.usuario_id === user.userId);
+    const productos = canSeeAll
       ? await productModel.findByLugarIdAll(lugarId)
       : await productModel.findByLugarId(lugarId);
     return successResponse(productos);
@@ -42,6 +44,9 @@ export async function POST(
     if (!Number.isInteger(lugarId) || lugarId <= 0) {
       return errorResponse("ID de lugar inválido", 400);
     }
+
+    const auth = await canManageLugar(request, lugarId);
+    if (!auth) return errorResponse("No autorizado", 401);
 
     const body = await request.json();
     const { nombre, precio, notas, imagen, escencial, id_categ } = body;

@@ -22,7 +22,7 @@ export function Hero() {
       <div className="relative mx-auto flex max-w-5xl flex-col items-center px-4 pb-20 pt-16 text-center sm:pb-28 sm:pt-24">
         <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-4 py-1.5 text-sm text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-300">
           <Lightbulb className="h-4 w-4" />
-          Encuentra los mejores precios cerca de ti
+          Encuentra los mejores precios gracias a tu comunidad
         </div>
 
         <h1 className="text-4xl font-bold tracking-tight text-zinc-900 sm:text-5xl lg:text-6xl dark:text-zinc-50">
@@ -30,8 +30,9 @@ export function Hero() {
         </h1>
 
         <p className="mt-4 max-w-2xl text-lg text-zinc-600 sm:text-xl dark:text-zinc-400">
-          Compara precios de productos de primera necesidad, encuentra los
-          lugares más cercanos y ahorra en tu compra mensual.
+          Registra y comparte los precios de tus lugares de confianza, descubre
+          los de tu comunidad y ahorra todos juntos. Organiza tu presupuesto,
+          crea packs y prepara tus compras.
         </p>
 
         <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row">

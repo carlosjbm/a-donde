@@ -302,7 +302,7 @@ export async function updatePrecio(
        VALUES (?, ?, ?, ?, ?)`,
       [
         idProducto,
-        precio,
+        precioAnterior,
         idUsuario ?? null,
         fuente ?? "manual",
         notas ?? null,

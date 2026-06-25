@@ -15,6 +15,8 @@ import {
   Lightbulb,
 } from "lucide-react";
 import type { SugerenciaPack, SugerenciaProducto } from "@/types";
+import type { Lugar } from "@/types";
+import { StarRating } from "@/components/star-rating";
 
 type PackTheme = {
   key: string;
@@ -70,6 +72,24 @@ const PACK_THEMES: Record<string, PackTheme> = {
     priceTextDark: "dark:text-amber-300",
     glow: "from-amber-500/25 via-rose-400/10 to-transparent",
   },
+  descuento: {
+    key: "descuento",
+    badge: "bg-rose-100 text-rose-700 ring-rose-200 dark:bg-rose-900/40 dark:text-rose-300 dark:ring-rose-800/60",
+    badgeText: "Precios rebajados",
+    icon: Sparkles,
+    surface:
+      "bg-[radial-gradient(120%_120%_at_0%_0%,rgba(225,29,72,0.15)_0%,rgba(225,29,72,0.04)_45%,rgba(255,255,255,0.92)_100%)]",
+    surfaceDark:
+      "dark:bg-[radial-gradient(120%_120%_at_0%_0%,rgba(225,29,72,0.25)_0%,rgba(225,29,72,0.07)_45%,rgba(24,24,27,0.95)_100%)]",
+    ring: "ring-rose-200/70 dark:ring-rose-900/50",
+    border: "border-rose-200/80",
+    borderDark: "dark:border-rose-900/50",
+    accentText: "text-rose-700",
+    accentTextDark: "dark:text-rose-300",
+    priceText: "text-rose-700",
+    priceTextDark: "dark:text-rose-300",
+    glow: "from-rose-500/20 via-pink-400/10 to-transparent",
+  },
   default: {
     key: "default",
     badge: "bg-zinc-100 text-zinc-700 ring-zinc-200 dark:bg-zinc-800 dark:text-zinc-300 dark:ring-zinc-700",
@@ -96,6 +116,8 @@ function getPackTheme(nombre: string): PackTheme {
     return PACK_THEMES.basico;
   if (key.includes("lujo") || key.includes("premium") || key.includes("lujoso"))
     return PACK_THEMES.lujoso;
+  if (key.includes("descuento") || key.includes("oferta"))
+    return PACK_THEMES.descuento;
   return PACK_THEMES.default;
 }
 
@@ -189,12 +211,12 @@ function PackCard({ pack, index }: { pack: SugerenciaPack; index: number }) {
       {featured && (
         <Link
           href={`/lugares/${featured.lugar_id}?producto=${featured.id}&autobuy=1`}
-          className="relative mt-5 flex items-center gap-4 rounded-xl border border-white/60 bg-white/70 p-3.5 backdrop-blur transition-colors hover:border-white hover:bg-white/90 dark:border-zinc-800/60 dark:bg-zinc-900/50 dark:hover:border-zinc-700 dark:hover:bg-zinc-900/80"
+          className="relative mt-5 flex flex-wrap items-center gap-x-4 gap-y-2 rounded-xl border border-white/60 bg-white/70 p-3.5 backdrop-blur transition-colors hover:border-white hover:bg-white/90 dark:border-zinc-800/60 dark:bg-zinc-900/50 dark:hover:border-zinc-700 dark:hover:bg-zinc-900/80"
         >
           <ProductThumb producto={featured} theme={theme} />
           <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-1.5">
-              <p className="truncate text-sm font-semibold text-zinc-900 dark:text-zinc-50">
+            <div className="flex flex-wrap items-center gap-1.5">
+              <p className="break-words text-sm font-semibold text-zinc-900 dark:text-zinc-50">
                 {featured.nombre}
               </p>
               {featured.escencial && (
@@ -202,17 +224,27 @@ function PackCard({ pack, index }: { pack: SugerenciaPack; index: number }) {
                   Esencial
                 </span>
               )}
+              {featured.descuento_porcentaje != null && (
+                <span className="shrink-0 rounded-md bg-green-100 px-1.5 py-0.5 text-[9px] font-bold text-green-700 dark:bg-green-900/60 dark:text-green-300">
+                  -{featured.descuento_porcentaje}%
+                </span>
+              )}
             </div>
-            <p className="mt-0.5 flex items-center gap-1 text-xs text-zinc-500 dark:text-zinc-400">
-              <Store className="h-3 w-3" />
-              {featured.lugar_nombre}
+            <p className="mt-0.5 flex items-center gap-1 break-words text-xs text-zinc-500 dark:text-zinc-400">
+              <Store className="h-3 w-3 shrink-0" />
+              <span className="break-words">{featured.lugar_nombre}</span>
             </p>
           </div>
-          <div className="text-right">
+          <div className="w-full sm:w-auto text-left sm:text-right sm:self-center">
             <p className={`text-sm font-bold ${theme.priceText} ${theme.priceTextDark}`}>
               {formatPrice(featured.precio)}
+              {featured.precio_original != null && featured.precio_original > featured.precio && (
+                <span className="ml-1 text-[10px] font-normal text-zinc-400 line-through">
+                  {formatPrice(featured.precio_original)}
+                </span>
+              )}
             </p>
-            <p className="text-[10px] font-medium uppercase tracking-wide text-zinc-400">
+            <p className="hidden sm:block text-[10px] font-medium uppercase tracking-wide text-zinc-400">
               Mejor opción
             </p>
           </div>
@@ -231,10 +263,17 @@ function PackCard({ pack, index }: { pack: SugerenciaPack; index: number }) {
                   <ShoppingBasket className="h-3.5 w-3.5 text-zinc-500 dark:text-zinc-400" />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm text-zinc-700 dark:text-zinc-200">
-                    {producto.nombre}
-                  </p>
-                  <p className="truncate text-[11px] text-zinc-500 dark:text-zinc-500">
+                  <div className="flex items-center gap-1.5">
+                    <p className="break-words text-sm text-zinc-700 dark:text-zinc-200">
+                      {producto.nombre}
+                    </p>
+                    {producto.descuento_porcentaje != null && (
+                      <span className="shrink-0 rounded-md bg-green-100 px-1 py-0.5 text-[8px] font-bold text-green-700 dark:bg-green-900/60 dark:text-green-300">
+                        -{producto.descuento_porcentaje}%
+                      </span>
+                    )}
+                  </div>
+                  <p className="break-words text-[11px] text-zinc-500 dark:text-zinc-500">
                     {producto.lugar_nombre}
                   </p>
                 </div>
@@ -242,6 +281,11 @@ function PackCard({ pack, index }: { pack: SugerenciaPack; index: number }) {
                   className={`shrink-0 text-sm font-semibold ${theme.priceText} ${theme.priceTextDark}`}
                 >
                   {formatPrice(producto.precio)}
+                  {producto.precio_original != null && producto.precio_original > producto.precio && (
+                    <span className="ml-1 text-[10px] font-normal text-zinc-400 line-through">
+                      {formatPrice(producto.precio_original)}
+                    </span>
+                  )}
                 </span>
                 <ArrowUpRight className="h-3.5 w-3.5 shrink-0 text-zinc-400 transition-transform group-hover/row:translate-x-0.5 group-hover/row:-translate-y-0.5" />
               </Link>
@@ -262,6 +306,81 @@ function PackCard({ pack, index }: { pack: SugerenciaPack; index: number }) {
         </p>
       )}
     </article>
+  );
+}
+
+function PlacesCarousel() {
+  const [lugares, setLugares] = useState<Lugar[]>([]);
+  const [current, setCurrent] = useState(0);
+
+  useEffect(() => {
+    fetch("/api/lugares/top")
+      .then((res) => res.json() as Promise<{ success: boolean; data: Lugar[] }>)
+      .then((json) => {
+        if (json.success) setLugares(json.data);
+      })
+      .catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    if (lugares.length < 2) return;
+    const id = setInterval(() => {
+      setCurrent((prev) => (prev + 1) % lugares.length);
+    }, 3000);
+    return () => clearInterval(id);
+  }, [lugares.length]);
+
+  if (lugares.length === 0) return null;
+
+  const lugar = lugares[current];
+
+  return (
+    <div className="relative mb-8 overflow-hidden rounded-2xl border border-amber-200/60 bg-gradient-to-br from-amber-50 via-white to-white ring-1 ring-amber-200/30 dark:border-amber-900/50 dark:from-amber-950/40 dark:via-zinc-900 dark:to-zinc-900 dark:ring-amber-900/30">
+      <div
+        aria-hidden
+        className="pointer-events-none absolute -left-16 -top-16 h-40 w-40 rounded-full bg-amber-400/20 blur-3xl"
+      />
+      <Link
+        href={`/lugares/${lugar.id}`}
+        className="relative flex items-center gap-4 px-5 py-4 transition-colors hover:bg-white/50 dark:hover:bg-zinc-900/60 sm:px-6"
+      >
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-100 text-amber-700 ring-1 ring-amber-200/60 dark:bg-amber-900/50 dark:text-amber-300 dark:ring-amber-800/40">
+          <Store className="h-5 w-5" />
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="break-words text-sm font-semibold text-zinc-900 dark:text-zinc-50">
+            {lugar.nombre}
+          </p>
+          <div className="mt-0.5 flex items-center gap-2">
+            <StarRating value={lugar.estrellas} size="sm" />
+            <span className="text-[11px] font-medium text-amber-600 dark:text-amber-400">
+              {lugar.estrellas}
+            </span>
+          </div>
+        </div>
+        <div className="flex shrink-0 items-center gap-1.5 text-xs font-medium text-amber-600 dark:text-amber-400">
+          <span>Ver lugar</span>
+          <ArrowUpRight className="h-3.5 w-3.5" />
+        </div>
+      </Link>
+      {lugares.length > 1 && (
+        <div className="flex justify-center gap-1 pb-3">
+          {lugares.map((_, i) => (
+            <button
+              key={i}
+              type="button"
+              onClick={() => setCurrent(i)}
+              className={`h-1.5 rounded-full transition-all duration-300 ${
+                i === current
+                  ? "w-5 bg-amber-500"
+                  : "w-1.5 bg-amber-300/60 dark:bg-amber-700/40"
+              }`}
+              aria-label={`Ir al lugar ${i + 1}`}
+            />
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -376,8 +495,8 @@ export function SuggestionsSection() {
               </span>
             </h2>
             <p className="mt-3 text-base text-zinc-600 dark:text-zinc-400">
-              Cruzamos tus packs con lo que aún no has comprado y te mostramos
-              las mejores opciones para completar tu despensa.
+              Basado en tus lugares de confianza y lo que tu comunidad ha compartido,
+              te mostramos los productos que aún te faltan para completar tu despensa.
             </p>
           </div>
 
@@ -399,6 +518,7 @@ export function SuggestionsSection() {
         </div>
 
         <div className="mt-10">
+          <PlacesCarousel />
           {loading ? (
             <Skeleton />
           ) : error ? (

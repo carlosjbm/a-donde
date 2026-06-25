@@ -775,7 +775,7 @@ export default function AdminPage() {
             </div>
           ) : (
             <div className="space-y-2">
-              {filtered.map((u) => (
+              {filtered.slice(0,3).map((u) => (
                 <div
                   key={u.id}
                   className="flex flex-col gap-2 rounded-lg border border-zinc-200/70 px-4 py-3 transition-all hover:border-zinc-300 sm:flex-row sm:items-center sm:gap-3 dark:border-zinc-800/60 dark:hover:border-zinc-700"
@@ -885,7 +885,7 @@ export default function AdminPage() {
             </div>
           ) : (
             <div className="space-y-2">
-              {filteredLugares.map((l) => (
+              {filteredLugares.slice(0,4).map((l) => (
                 <div
                   key={l.id}
                   className="flex flex-col gap-2 rounded-lg border border-zinc-200/70 px-4 py-3 transition-all hover:border-zinc-300 sm:flex-row sm:items-center sm:gap-3 dark:border-zinc-800/60 dark:hover:border-zinc-700"
@@ -956,7 +956,7 @@ export default function AdminPage() {
           </div>
         ) : (
           <div className="space-y-2">
-            {filteredProductos.map((p) => (
+            {filteredProductos.slice(0,9).map((p) => (
               <div
                 key={p.id}
                 className="flex flex-col gap-2 rounded-lg border border-zinc-200/70 px-4 py-3 transition-all hover:border-zinc-300 sm:flex-row sm:items-center sm:gap-3 dark:border-zinc-800/60 dark:hover:border-zinc-700"

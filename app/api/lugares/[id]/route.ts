@@ -1,7 +1,8 @@
 import { NextRequest } from "next/server";
 import * as lugarModel from "@/models/lugar";
 import { successResponse, errorResponse } from "@/lib/utils";
-import { requireAdmin, unauthorizedResponse } from "@/lib/admin-auth";
+import { unauthorizedResponse } from "@/lib/admin-auth";
+import { canManageLugar } from "@/lib/lugar-auth";
 
 export async function GET(
   _request: NextRequest,
@@ -23,12 +24,13 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const admin = await requireAdmin(request);
-    if (!admin) return unauthorizedResponse();
-
     const { id } = await params;
+    const lugarId = Number(id);
+    const auth = await canManageLugar(request, lugarId);
+    if (!auth) return unauthorizedResponse();
+
     const body = await request.json();
-    const lugar = await lugarModel.update(Number(id), body);
+    const lugar = await lugarModel.update(lugarId, body);
     if (!lugar) return errorResponse("Lugar no encontrado", 404);
     return successResponse(lugar);
   } catch (error) {
@@ -42,11 +44,12 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const admin = await requireAdmin(request);
-    if (!admin) return unauthorizedResponse();
-
     const { id } = await params;
-    const deleted = await lugarModel.remove(Number(id));
+    const lugarId = Number(id);
+    const auth = await canManageLugar(request, lugarId);
+    if (!auth) return unauthorizedResponse();
+
+    const deleted = await lugarModel.remove(lugarId);
     if (!deleted) return errorResponse("Lugar no encontrado", 404);
     return successResponse({ message: "Lugar eliminado" });
   } catch (error) {

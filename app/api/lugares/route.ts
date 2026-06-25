@@ -1,7 +1,18 @@
 import { NextRequest } from "next/server";
 import * as lugarModel from "@/models/lugar";
 import { successResponse, errorResponse } from "@/lib/utils";
-import { requireAdmin, unauthorizedResponse } from "@/lib/admin-auth";
+import { verifyAccessToken } from "@/lib/auth";
+
+async function getUserIdFromCookie(request: NextRequest): Promise<number | null> {
+  const token = request.cookies.get("access_token")?.value;
+  if (!token) return null;
+  try {
+    const payload = await verifyAccessToken(token);
+    return payload?.userId ?? null;
+  } catch {
+    return null;
+  }
+}
 
 export async function GET() {
   try {
@@ -15,8 +26,8 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   try {
-    const admin = await requireAdmin(request);
-    if (!admin) return unauthorizedResponse();
+    const userId = await getUserIdFromCookie(request);
+    if (!userId) return errorResponse("No autenticado", 401);
 
     const body = await request.json();
     const { nombre, descripcion, direccion, latitud, longitud, transferencia } = body;
@@ -32,6 +43,7 @@ export async function POST(request: NextRequest) {
       latitud: latitud || null,
       longitud: longitud || null,
       transferencia: Boolean(transferencia),
+      usuario_id: userId,
     });
     return successResponse(lugar, 201);
   } catch (error) {

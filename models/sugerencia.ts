@@ -59,19 +59,19 @@ export async function findSuggestionsByUser(
   );
 
   const [ofertaRows] = await pool.query(
-    `SELECT DISTINCT
+    `SELECT
        pr.id   AS producto_id,
        pr.nombre AS producto_nombre,
        pr.precio AS producto_precio,
+       (SELECT MAX(pp.precio) FROM producto_precios pp WHERE pp.id_producto = pr.id) AS precio_original,
        pr.imagen AS producto_imagen,
        pr.escencial AS producto_escencial,
        pr.id_lugar AS lugar_id,
        l.nombre AS lugar_nombre
      FROM productos pr
      JOIN lugares l ON pr.id_lugar = l.id
-     JOIN producto_precios pp ON pp.id_producto = pr.id
      WHERE pr.activo = 1
-       AND pr.precio < pp.precio
+       AND pr.precio < (SELECT MAX(pp.precio) FROM producto_precios pp WHERE pp.id_producto = pr.id)
        AND pr.id NOT IN (
          SELECT c.id_producto
          FROM compras c
@@ -119,6 +119,7 @@ export async function findSuggestionsByUser(
     producto_id: number;
     producto_nombre: string;
     producto_precio: number;
+    precio_original: number | null;
     producto_imagen: string | null;
     producto_escencial: number;
     lugar_id: number;
@@ -176,16 +177,25 @@ export async function findSuggestionsByUser(
   if ((ofertaRows as SimpleRow[]).length > 0) {
     const pack: SugerenciaPack = {
       id: ++packIdCounter,
-      nombre: "Ofertas",
+      nombre: "Descuentos",
       total: 0,
       precio_total: 0,
       productos: [],
     };
     for (const r of ofertaRows as SimpleRow[]) {
+      const precioOriginal = r.precio_original ? Number(r.precio_original) : null;
+      const descuentoPct =
+        precioOriginal && precioOriginal > Number(r.producto_precio)
+          ? Math.round(
+              (1 - Number(r.producto_precio) / precioOriginal) * 100
+            )
+          : null;
       pack.productos.push({
         id: r.producto_id,
         nombre: r.producto_nombre,
         precio: Number(r.producto_precio),
+        precio_original: precioOriginal,
+        descuento_porcentaje: descuentoPct,
         imagen: r.producto_imagen,
         escencial: Boolean(r.producto_escencial),
         lugar_id: r.lugar_id,
@@ -211,7 +221,26 @@ export async function findSuggestionsByUser(
 
   let result = Array.from(packsMap.values());
   if (hasBudget) {
-    result = result.filter((pack) => pack.precio_total <= disponible);
+    result = result
+      .map((pack) => {
+        if (pack.id >= 100) {
+          const affordable = pack.productos.filter(
+            (p) => Number(p.precio) <= disponible
+          );
+          if (affordable.length === 0) return null;
+          return {
+            ...pack,
+            productos: affordable,
+            total: affordable.length,
+            precio_total: affordable.reduce(
+              (sum, p) => sum + Number(p.precio),
+              0
+            ),
+          };
+        }
+        return pack.precio_total <= disponible ? pack : null;
+      })
+      .filter((p): p is SugerenciaPack => p !== null);
   }
   result.sort(
     (a, b) => {

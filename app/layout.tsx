@@ -16,9 +16,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "a-donde — Encuentra los mejores precios cerca de ti",
+  title: "a-donde — Todos sabemos dónde comprar mejor",
   description:
-    "Compara precios de productos de primera necesidad, encuentra los lugares más cercanos y ahorra en tu compra mensual.",
+    "Comparte los precios de tus lugares de confianza, descubre los mejores precios cerca de ti y ahorra en comunidad. Gestiona tu presupuesto, crea packs y organiza tus compras.",
 };
 
 export default function RootLayout({

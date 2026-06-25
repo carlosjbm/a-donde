@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import * as productModel from "@/models/producto";
 import * as lugarModel from "@/models/lugar";
 import { successResponse, errorResponse } from "@/lib/utils";
+import { canManageLugar } from "@/lib/lugar-auth";
 
 export async function GET(
   request: NextRequest,
@@ -41,9 +42,6 @@ export async function PUT(
   context: { params: Promise<Record<string, string>> }
 ) {
   try {
-    const userId = request.headers.get("x-user-id");
-    if (!userId) return errorResponse("No autenticado", 401);
-
     const { id, productoId } = await context.params;
     const lugarId = Number(id);
     const idProducto = Number(productoId);
@@ -54,6 +52,9 @@ export async function PUT(
     if (!Number.isInteger(idProducto) || idProducto <= 0) {
       return errorResponse("ID de producto inválido", 400);
     }
+
+    const auth = await canManageLugar(request, lugarId);
+    if (!auth) return errorResponse("No autorizado", 401);
 
     const lugar = await lugarModel.findById(lugarId);
     if (!lugar) {
@@ -89,9 +90,6 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string; productoId: string }> }
 ) {
   try {
-    const userId = request.headers.get("x-user-id");
-    if (!userId) return errorResponse("No autenticado", 401);
-
     const { id, productoId } = await params;
     const lugarId = Number(id);
     const prodId = Number(productoId);
@@ -103,12 +101,15 @@ export async function DELETE(
       return errorResponse("ID de producto inválido", 400);
     }
 
+    const auth = await canManageLugar(request, lugarId);
+    if (!auth) return errorResponse("No autorizado", 401);
+
     const lugar = await lugarModel.findById(lugarId);
     if (!lugar) {
       return errorResponse("Lugar no encontrado", 404);
     }
 
-    const deleted = await productModel.deleteProducto(prodId, Number(userId));
+    const deleted = await productModel.deleteProducto(prodId, auth.userId);
     if (!deleted) return errorResponse("Producto no encontrado", 404);
 
     return successResponse({ deleted: true });

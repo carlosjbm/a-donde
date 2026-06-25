@@ -146,7 +146,7 @@ function ProductCard({
   producto,
   highlightedProductId,
   productRefs,
-  user,
+  canManage,
   setHistoryProducto,
   setPriceEditProducto,
   abrirPackModal,
@@ -155,7 +155,7 @@ function ProductCard({
   producto: Producto;
   highlightedProductId: number | null;
   productRefs: React.MutableRefObject<Record<number, HTMLDivElement | null>>;
-  user: { rol_id: number } | null;
+  canManage: boolean;
   setHistoryProducto: (p: Producto) => void;
   setPriceEditProducto: (p: Producto) => void;
   abrirPackModal: (p: Producto) => void;
@@ -217,7 +217,7 @@ function ProductCard({
               <LineChart className="h-4 w-4" />
               <span className="hidden sm:inline">Comportamiento</span>
             </button>
-            {user && user.rol_id === 1 && (
+            {canManage && (
               <button
                 type="button"
                 onClick={(e) => {
@@ -266,6 +266,7 @@ import type {
   Presupuesto,
   CompraConProducto,
   UserPack,
+  Categoria,
 } from "@/types";
 
 export default function LugarDetailPage() {
@@ -303,6 +304,12 @@ export default function LugarDetailPage() {
     msg: string;
   } | null>(null);
   const [userRating, setUserRating] = useState<number | null>(null);
+  const [showAddProduct, setShowAddProduct] = useState(false);
+  const [newProductName, setNewProductName] = useState("");
+  const [newProductPrice, setNewProductPrice] = useState("");
+  const [newProductCateg, setNewProductCateg] = useState("");
+  const [categorias, setCategorias] = useState<Categoria[]>([]);
+  const [addingProduct, setAddingProduct] = useState(false);
   const [ratingLoading, setRatingLoading] = useState(false);
   const copyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -584,6 +591,38 @@ export default function LugarDetailPage() {
     }
   }
 
+  async function addProduct(e: React.FormEvent) {
+    e.preventDefault();
+    if (!newProductName.trim() || !newProductPrice.trim() || !newProductCateg) return;
+    setAddingProduct(true);
+    try {
+      const res = await fetch(`/api/lugares/${lugar!.id}/productos`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          nombre: newProductName.trim(),
+          precio: Number(newProductPrice),
+          id_categ: Number(newProductCateg),
+        }),
+      });
+      const json = await res.json();
+      if (json.success) {
+        setProductos((prev) => [...prev, json.data]);
+        setNewProductName("");
+        setNewProductPrice("");
+        setNewProductCateg("");
+        setShowAddProduct(false);
+        showToast("success", "Producto creado");
+      } else {
+        showToast("error", json.error);
+      }
+    } catch {
+      showToast("error", "Error al crear producto");
+    } finally {
+      setAddingProduct(false);
+    }
+  }
+
   useEffect(() => {
     return () => {
       if (copyTimeoutRef.current) clearTimeout(copyTimeoutRef.current);
@@ -623,8 +662,8 @@ export default function LugarDetailPage() {
       )
     : productos;
 
-  const isAdmin = user && user.rol_id === 1;
-  const productosActivos = isAdmin
+  const canManage = !!(user && lugar && (user.rol_id === 1 || user.id === lugar.usuario_id));
+  const productosActivos = canManage
     ? search.trim()
       ? productos.filter(
           (p) =>
@@ -632,7 +671,7 @@ export default function LugarDetailPage() {
         )
       : productos.filter((p) => p.activo)
     : [];
-  const productosInactivos = isAdmin
+  const productosInactivos = canManage
     ? search.trim()
       ? productos.filter(
           (p) =>
@@ -706,26 +745,49 @@ export default function LugarDetailPage() {
         <div className="lg:col-span-2">
           <Card title="Productos">
             {productos.length > 0 && (
-              <div className="relative mb-4">
-                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
-                <input
-                  type="text"
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  placeholder="Buscar producto en este lugar..."
-                  className="w-full rounded-lg border border-zinc-300 bg-white py-2 pl-9 pr-9 text-sm text-zinc-900 placeholder-zinc-400 focus:border-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-500 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100 dark:placeholder-zinc-500"
-                />
-                {search && (
-                  <button
-                    type="button"
-                    onClick={() => setSearch("")}
-                    aria-label="Limpiar búsqueda"
-                    className="absolute right-2 top-1/2 flex h-6 w-6 -translate-y-1/2 items-center justify-center rounded-md text-zinc-400 transition-colors hover:bg-zinc-100 hover:text-zinc-700 dark:hover:bg-zinc-700 dark:hover:text-zinc-200"
-                  >
-                    <X className="h-3.5 w-3.5" />
-                  </button>
+              <>
+                <div className="relative mb-4">
+                  <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
+                  <input
+                    type="text"
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    placeholder="Buscar producto en este lugar..."
+                    className="w-full rounded-lg border border-zinc-300 bg-white py-2 pl-9 pr-9 text-sm text-zinc-900 placeholder-zinc-400 focus:border-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-500 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100 dark:placeholder-zinc-500"
+                  />
+                  {search && (
+                    <button
+                      type="button"
+                      onClick={() => setSearch("")}
+                      aria-label="Limpiar búsqueda"
+                      className="absolute right-2 top-1/2 flex h-6 w-6 -translate-y-1/2 items-center justify-center rounded-md text-zinc-400 transition-colors hover:bg-zinc-100 hover:text-zinc-700 dark:hover:bg-zinc-700 dark:hover:text-zinc-200"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  )}
+                </div>
+                {canManage && (
+                  <div className="mb-4 flex justify-end">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setNewProductName("");
+                        setNewProductPrice("");
+                        setNewProductCateg("");
+                        setShowAddProduct(true);
+                        fetch("/api/categorias")
+                          .then((r) => r.json())
+                          .then((j) => { if (j.success) setCategorias(j.data); })
+                          .catch(() => {});
+                      }}
+                      className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-700 transition-colors hover:bg-emerald-100 dark:border-emerald-900/50 dark:bg-emerald-950/40 dark:text-emerald-300 dark:hover:bg-emerald-950/60"
+                    >
+                      <Plus className="h-3.5 w-3.5" />
+                      Agregar producto
+                    </button>
+                  </div>
                 )}
-              </div>
+              </>
             )}
             {productos.length === 0 ? (
               <div className="flex flex-col items-center gap-2 py-8 text-center">
@@ -734,7 +796,7 @@ export default function LugarDetailPage() {
                   No hay productos registrados en este lugar.
                 </p>
               </div>
-            ) : isAdmin ? (
+            ) : canManage ? (
               <>
                 {productosActivos.length > 0 && (
                   <div className="mb-6">
@@ -748,7 +810,7 @@ export default function LugarDetailPage() {
                           producto={producto}
                           highlightedProductId={highlightedProductId}
                           productRefs={productRefs}
-                          user={user}
+                          canManage={canManage}
                           setHistoryProducto={setHistoryProducto}
                           setPriceEditProducto={setPriceEditProducto}
                           abrirPackModal={abrirPackModal}
@@ -770,7 +832,7 @@ export default function LugarDetailPage() {
                           producto={producto}
                           highlightedProductId={highlightedProductId}
                           productRefs={productRefs}
-                          user={user}
+                          canManage={canManage}
                           setHistoryProducto={setHistoryProducto}
                           setPriceEditProducto={setPriceEditProducto}
                           abrirPackModal={abrirPackModal}
@@ -870,7 +932,7 @@ export default function LugarDetailPage() {
                                 Comportamiento
                               </span>
                             </button>
-                            {user && user.rol_id === 1 && (
+                            {canManage && (
                               <button
                                 type="button"
                                 onClick={(e) => {
@@ -1379,6 +1441,113 @@ export default function LugarDetailPage() {
             )}
           </div>
         )}
+      </Modal>
+
+      <Modal open={showAddProduct} onClose={() => {
+        if (addingProduct) return;
+        setShowAddProduct(false);
+        setNewProductName("");
+        setNewProductPrice("");
+        setNewProductCateg("");
+      }}>
+        <form onSubmit={addProduct} className="flex flex-col gap-3 sm:gap-4">
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-violet-100 text-violet-600 dark:bg-violet-950/60 dark:text-violet-400">
+                <Plus className="h-5 w-5" />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">
+                  Agregar producto
+                </h3>
+                <p className="text-sm text-zinc-500">
+                  {lugar?.nombre}
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                setShowAddProduct(false);
+                setNewProductName("");
+                setNewProductPrice("");
+                setNewProductCateg("");
+              }}
+              disabled={addingProduct}
+              className="rounded-lg p-1.5 text-zinc-400 transition-colors hover:bg-zinc-100 hover:text-zinc-700 disabled:opacity-50 dark:hover:bg-zinc-800 dark:hover:text-zinc-200"
+              aria-label="Cerrar"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+
+          <div>
+            <label className="mb-1 block text-xs font-medium text-zinc-600 dark:text-zinc-400">
+              Nombre del producto
+            </label>
+            <input
+              type="text"
+              value={newProductName}
+              onChange={(e) => setNewProductName(e.target.value)}
+              placeholder="Ej: Leche entera"
+              className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 placeholder-zinc-400 focus:border-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-500 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100"
+              autoFocus
+            />
+          </div>
+
+          <div>
+            <label className="mb-1 block text-xs font-medium text-zinc-600 dark:text-zinc-400">
+              Precio
+            </label>
+            <input
+              type="number"
+              min={1}
+              value={newProductPrice}
+              onChange={(e) => setNewProductPrice(e.target.value)}
+              placeholder="Ej: 1500"
+              className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 placeholder-zinc-400 focus:border-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-500 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100"
+            />
+          </div>
+
+          <div>
+            <label className="mb-1 block text-xs font-medium text-zinc-600 dark:text-zinc-400">
+              Categoría
+            </label>
+            <select
+              value={newProductCateg}
+              onChange={(e) => setNewProductCateg(e.target.value)}
+              className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 focus:border-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-500 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100"
+            >
+              <option value="">Seleccionar categoría</option>
+              {categorias.map((cat) => (
+                <option key={cat.id} value={cat.id}>
+                  {cat.nombre}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="flex gap-3 pt-1">
+            <Button
+              type="button"
+              variant="secondary"
+              className="flex-1"
+              onClick={() => {
+                setShowAddProduct(false);
+                setNewProductName("");
+                setNewProductPrice("");
+                setNewProductCateg("");
+              }}
+              disabled={addingProduct}
+            >
+              Cancelar
+            </Button>
+            <Button type="submit" className="flex-1" loading={addingProduct}>
+              <Plus className="mr-1.5 h-4 w-4" />
+              Crear
+            </Button>
+          </div>
+        </form>
       </Modal>
 
       {toast && (

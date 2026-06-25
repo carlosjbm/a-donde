@@ -2,7 +2,7 @@ import { NextRequest } from "next/server";
 import { z } from "zod";
 import * as productModel from "@/models/producto";
 import { successResponse, errorResponse } from "@/lib/utils";
-import { requireAdmin, unauthorizedResponse } from "@/lib/admin-auth";
+import { canManageLugar } from "@/lib/lugar-auth";
 
 const bodySchema = z.object({
   precio: z.coerce.number().positive("El precio debe ser mayor a 0").optional(),
@@ -15,12 +15,6 @@ export async function PUT(
   context: { params: Promise<Record<string, string>> }
 ) {
   try {
-    const userId = request.headers.get("x-user-id");
-    if (!userId) return errorResponse("No autenticado", 401);
-
-    const admin = await requireAdmin(request);
-    if (!admin) return unauthorizedResponse();
-
     const { id, productoId } = await context.params;
     const lugarId = Number(id);
     const idProducto = Number(productoId);
@@ -31,6 +25,9 @@ export async function PUT(
     if (!Number.isInteger(idProducto) || idProducto <= 0) {
       return errorResponse("ID de producto inválido", 400);
     }
+
+    const auth = await canManageLugar(request, lugarId);
+    if (!auth) return errorResponse("No autorizado", 401);
 
     const producto = await productModel.findByIdAny(idProducto);
     if (!producto || producto.id_lugar !== lugarId) {
@@ -48,7 +45,7 @@ export async function PUT(
       result = await productModel.updatePrecio({
         idProducto,
         precio: parsed.data.precio,
-        idUsuario: Number(userId),
+        idUsuario: auth.userId,
         fuente: "manual",
         notas: parsed.data.notas ?? null,
       });

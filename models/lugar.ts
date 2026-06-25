@@ -1,7 +1,7 @@
 import pool from "@/lib/db";
 import { Lugar } from "@/types";
 
-const COLUMNS = "id, nombre, descripcion, direccion, latitud, longitud, transferencia, estrellas, created_at, updated_at";
+const COLUMNS = "id, nombre, descripcion, direccion, latitud, longitud, transferencia, estrellas, usuario_id, created_at, updated_at";
 
 export async function findAll(): Promise<Lugar[]> {
   const [rows] = await pool.query(
@@ -45,11 +45,27 @@ export async function rate(
   return findById(lugarId);
 }
 
+export async function findTopRated(limit: number = 5): Promise<Lugar[]> {
+  const [rows] = await pool.query(
+    `SELECT ${COLUMNS} FROM lugares WHERE estrellas > 0 ORDER BY estrellas DESC, nombre ASC LIMIT ?`,
+    [limit]
+  );
+  return rows as Lugar[];
+}
+
+export async function findByUsuarioId(usuarioId: number): Promise<Lugar[]> {
+  const [rows] = await pool.query(
+    `SELECT ${COLUMNS} FROM lugares WHERE usuario_id = ? ORDER BY created_at DESC`,
+    [usuarioId]
+  );
+  return rows as Lugar[];
+}
+
 export async function create(
   data: Omit<Lugar, "id" | "created_at" | "updated_at" | "estrellas">
 ): Promise<Lugar> {
   const [result] = await pool.query(
-    "INSERT INTO lugares (nombre, descripcion, direccion, latitud, longitud, transferencia) VALUES (?, ?, ?, ?, ?, ?)",
+    "INSERT INTO lugares (nombre, descripcion, direccion, latitud, longitud, transferencia, usuario_id) VALUES (?, ?, ?, ?, ?, ?, ?)",
     [
       data.nombre,
       data.descripcion,
@@ -57,6 +73,7 @@ export async function create(
       data.latitud,
       data.longitud,
       data.transferencia ? 1 : 0,
+      data.usuario_id ?? null,
     ]
   );
   const id = (result as { insertId: number }).insertId;
@@ -115,6 +132,12 @@ export async function getUserRating(
   );
   const row = (rows as { estrellas: number }[])[0];
   return row ? row.estrellas : null;
+}
+
+export async function isOwner(lugarId: number, usuarioId: number): Promise<boolean> {
+  const lugar = await findById(lugarId);
+  if (!lugar) return false;
+  return lugar.usuario_id === usuarioId;
 }
 
 export async function remove(id: number): Promise<boolean> {
