@@ -1,5 +1,5 @@
 import pool from "@/lib/db";
-import { SugerenciaPack, SugerenciaProducto } from "@/types";
+import { SugerenciaPack } from "@/types";
 import * as presupuestoModel from "./presupuesto";
 
 export async function findSuggestionsByUser(
@@ -145,6 +145,8 @@ export async function findSuggestionsByUser(
       id: r.producto_id,
       nombre: r.producto_nombre,
       precio: Number(r.producto_precio),
+      precio_original: null,
+      descuento_porcentaje: null,
       imagen: r.producto_imagen,
       escencial: Boolean(r.producto_escencial),
       lugar_id: r.lugar_id,
@@ -165,6 +167,8 @@ export async function findSuggestionsByUser(
         id: r.producto_id,
         nombre: r.producto_nombre,
         precio: Number(r.producto_precio),
+        precio_original: null,
+        descuento_porcentaje: null,
         imagen: r.producto_imagen,
         escencial: Boolean(r.producto_escencial),
         lugar_id: r.lugar_id,

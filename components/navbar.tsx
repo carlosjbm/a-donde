@@ -46,7 +46,10 @@ export function Navbar() {
   }, [user]);
 
   const fetchRef = useRef(fetchData);
-  fetchRef.current = fetchData;
+
+  useEffect(() => {
+    fetchRef.current = fetchData;
+  }, [fetchData]);
 
   useEffect(() => {
     if (!user) return;

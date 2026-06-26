@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Modal } from "@/components/ui/modal";
 import { Button } from "@/components/ui/button";
 import { DollarSign, X } from "lucide-react";
@@ -23,15 +23,9 @@ export function UpdatePriceModal({
 }: UpdatePriceModalProps) {
   const [precio, setPrecio] = useState("");
   const [notas, setNotas] = useState("");
-  const [activo, setActivo] = useState(true);
   const [saving, setSaving] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
-
-  useEffect(() => {
-    if (producto) {
-      setActivo(producto.activo);
-    }
-  }, [producto]);
+  const [activo, setActivo] = useState(() => producto?.activo ?? true);
 
   function reset() {
     setPrecio("");

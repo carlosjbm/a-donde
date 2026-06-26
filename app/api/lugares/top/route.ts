@@ -1,8 +1,7 @@
-import { NextRequest } from "next/server";
 import * as lugarModel from "@/models/lugar";
 import { successResponse, errorResponse } from "@/lib/utils";
 
-export async function GET(_request: NextRequest) {
+export async function GET() {
   try {
     const lugares = await lugarModel.findTopRated(5);
     return successResponse(lugares);

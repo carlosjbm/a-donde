@@ -35,8 +35,6 @@ import {
   List,
   Trash2,
   Bell,
-  Calendar,
-  MapPin,
 } from "lucide-react";
 
 type FilterTab = "todas" | "despensa" | "agotadas";
@@ -226,16 +224,30 @@ function BudgetItem({
   const valorInicial = Number(presupuesto.valor_inicial);
   const activo = presupuesto.activo;
 
-  const daysRemaining = activo
-    ? Math.max(
-        0,
-        30 -
-          Math.floor(
-            (Date.now() - new Date(presupuesto.created_date).getTime()) /
-              (1000 * 60 * 60 * 24),
-          ),
-      )
-    : 0;
+  const [daysRemaining, setDaysRemaining] = useState(0);
+
+  useEffect(() => {
+    const calc = () => {
+      setDaysRemaining(
+        activo
+          ? Math.max(
+              0,
+              30 -
+                Math.floor(
+                  (Date.now() - new Date(presupuesto.created_date).getTime()) /
+                    (1000 * 60 * 60 * 24),
+                ),
+            )
+          : 0,
+      );
+    };
+    const id = setTimeout(calc, 0);
+    const interval = setInterval(calc, 60000);
+    return () => {
+      clearTimeout(id);
+      clearInterval(interval);
+    };
+  }, [activo, presupuesto.created_date]);
 
   const dayColor =
     daysRemaining > 7
@@ -330,17 +342,6 @@ function BudgetItem({
     </div>
   );
 }
-
-type GroupedCompra = {
-  ids: number[];
-  id_producto: number;
-  producto_nombre: string;
-  producto_precio: string;
-  total_precio: number;
-  cantidad: number;
-  agotado: boolean;
-  create_at: string;
-};
 
 function PurchaseCard({
   compra,
@@ -642,9 +643,6 @@ export default function PerfilPage() {
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState("");
   const [showForm, setShowForm] = useState(false);
-  const [deactivatingPresupuesto, setDeactivatingPresupuesto] = useState<
-    number | null
-  >(null);
   const [showNewPackForm, setShowNewPackForm] = useState(false);
   const [newPackName, setNewPackName] = useState("");
   const [creatingPack, setCreatingPack] = useState(false);
@@ -855,7 +853,6 @@ export default function PerfilPage() {
 
   async function handleDeactivatePresupuesto(p: Presupuesto) {
     if (!confirm(`¿Desactivar el presupuesto "${p.descripcion}"?`)) return;
-    setDeactivatingPresupuesto(p.id);
     try {
       const res = await fetch(`/api/presupuestos/${p.id}`, {
         method: "PATCH",
@@ -874,8 +871,6 @@ export default function PerfilPage() {
       }
     } catch {
       showToast("error", "Error al desactivar presupuesto");
-    } finally {
-      setDeactivatingPresupuesto(null);
     }
   }
 

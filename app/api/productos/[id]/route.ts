@@ -56,7 +56,7 @@ export async function DELETE(
     if (!admin) return unauthorizedResponse();
 
     const { id } = await params;
-    await productoModel.deleteProducto(Number(id), admin.userId);
+    await productoModel.deleteProducto(Number(id));
     return successResponse({ message: "Producto eliminado" });
   } catch (error) {
     console.error("Error al eliminar producto:", error);

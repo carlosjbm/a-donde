@@ -145,7 +145,6 @@ function CoordField({
 function ProductCard({
   producto,
   highlightedProductId,
-  productRefs,
   canManage,
   setHistoryProducto,
   setPriceEditProducto,
@@ -154,7 +153,6 @@ function ProductCard({
 }: {
   producto: Producto;
   highlightedProductId: number | null;
-  productRefs: React.MutableRefObject<Record<number, HTMLDivElement | null>>;
   canManage: boolean;
   setHistoryProducto: (p: Producto) => void;
   setPriceEditProducto: (p: Producto) => void;
@@ -162,11 +160,10 @@ function ProductCard({
   abrirModal: (p: Producto) => void;
 }) {
   const isHighlighted = highlightedProductId === producto.id;
+
   return (
     <div
-      ref={(el) => {
-        productRefs.current[producto.id] = el;
-      }}
+      data-product-id={producto.id}
       className={`w-full overflow-hidden flex flex-col gap-3 rounded-lg border p-4 transition-all hover:bg-zinc-50 lg:flex-row lg:items-center lg:gap-4 dark:hover:bg-zinc-800/50 ${
         isHighlighted
           ? "border-amber-400 bg-amber-50 ring-2 ring-amber-300 ring-offset-2 dark:border-amber-500 dark:bg-amber-950/30 dark:ring-amber-500/50"
@@ -319,7 +316,9 @@ export default function LugarDetailPage() {
   }, []);
 
   const lugarRef = useRef(lugar);
-  lugarRef.current = lugar;
+  useEffect(() => {
+    lugarRef.current = lugar;
+  }, [lugar]);
 
   const handleRate = useCallback(
     async (estrellas: number) => {
@@ -351,7 +350,6 @@ export default function LugarDetailPage() {
   );
 
   const highlightedProductId = Number(searchParams.get("producto")) || null;
-  const productRefs = useRef<Record<number, HTMLDivElement | null>>({});
   const handledProductRef = useRef<number | null>(null);
 
   useEffect(() => {
@@ -430,7 +428,7 @@ export default function LugarDetailPage() {
     const match = productos.find((p) => p.id === productoId);
     if (!match) return;
 
-    const el = productRefs.current[productoId];
+    const el = document.querySelector<HTMLDivElement>(`[data-product-id="${productoId}"]`);
     if (el) {
       el.scrollIntoView({ behavior: "smooth", block: "center" });
     }
@@ -809,7 +807,7 @@ export default function LugarDetailPage() {
                           key={producto.id}
                           producto={producto}
                           highlightedProductId={highlightedProductId}
-                          productRefs={productRefs}
+
                           canManage={canManage}
                           setHistoryProducto={setHistoryProducto}
                           setPriceEditProducto={setPriceEditProducto}
@@ -831,7 +829,7 @@ export default function LugarDetailPage() {
                           key={producto.id}
                           producto={producto}
                           highlightedProductId={highlightedProductId}
-                          productRefs={productRefs}
+
                           canManage={canManage}
                           setHistoryProducto={setHistoryProducto}
                           setPriceEditProducto={setPriceEditProducto}
@@ -882,9 +880,7 @@ export default function LugarDetailPage() {
                   return (
                     <div
                       key={producto.id}
-                      ref={(el) => {
-                        productRefs.current[producto.id] = el;
-                      }}
+                      data-product-id={producto.id}
                       className={`w-full overflow-hidden flex flex-col gap-3 rounded-lg border p-4 transition-all hover:bg-zinc-50 lg:flex-row lg:items-center lg:gap-4 dark:hover:bg-zinc-800/50 ${
                         isHighlighted
                           ? "border-amber-400 bg-amber-50 ring-2 ring-amber-300 ring-offset-2 dark:border-amber-500 dark:bg-amber-950/30 dark:ring-amber-500/50"
@@ -1309,6 +1305,7 @@ export default function LugarDetailPage() {
       </Modal>
 
       <UpdatePriceModal
+        key={priceEditProducto?.id ?? "closed"}
         open={!!priceEditProducto}
         lugarId={lugar.id}
         producto={priceEditProducto}

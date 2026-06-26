@@ -104,6 +104,7 @@ export default function MapPicker({ lat, lng, onChange }: MapPickerProps) {
       markerRef.current = null;
       setMapReady(false);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {

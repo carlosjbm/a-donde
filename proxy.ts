@@ -10,7 +10,7 @@ const publicApiRoutes = [
   "/api/lugares",
 ];
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   if (
@@ -58,7 +58,6 @@ export async function middleware(request: NextRequest) {
 
   const requestHeaders = new Headers(request.headers);
   requestHeaders.set("x-user-id", payload.userId.toString());
-  // requestHeaders.set("x-user-rol", payload.rolId.toString());
   requestHeaders.set("x-user-email", payload.email);
 
   return NextResponse.next({
@@ -66,6 +65,6 @@ export async function middleware(request: NextRequest) {
   });
 }
 
-export const config = {
+export const proxyConfig = {
   matcher: ["/api/:path*", "/perfil/:path*", "/admin/:path*", "/login", "/register"],
 };

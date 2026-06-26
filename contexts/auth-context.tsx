@@ -39,10 +39,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } else {
       setUser(u);
     }
+    setLoading(false);
   }, []);
 
   useEffect(() => {
-    refreshUser().finally(() => setLoading(false));
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    refreshUser();
   }, [refreshUser]);
   
   const login = useCallback(async (email: string, password: string) => {

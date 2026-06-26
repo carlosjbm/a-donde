@@ -4,13 +4,12 @@ import { useState, useEffect } from 'react';
 import { UserPack } from '@/types';
 
 interface PackSelectorProps {
-  productId: number;
   productName: string;
   onPackSelected: (packId: number) => void;
   onCancel: () => void;
 }
 
-export function PackSelector({ productId, productName, onPackSelected, onCancel }: PackSelectorProps) {
+export function PackSelector({ productName, onPackSelected, onCancel }: PackSelectorProps) {
   const [packs, setPacks] = useState<UserPack[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -51,7 +50,7 @@ export function PackSelector({ productId, productName, onPackSelected, onCancel 
       <div className="bg-white p-6 rounded-lg shadow-lg max-w-md w-full">
         <h3 className="text-lg font-semibold mb-4">Agregar a un Pack</h3>
         <p className="text-sm text-gray-600 mb-4">
-          Selecciona un pack para agregar "{productName}":
+          Selecciona un pack para agregar &ldquo;{productName}&rdquo;:
         </p>
 
         {error && (

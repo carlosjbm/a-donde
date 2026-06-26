@@ -26,7 +26,7 @@ import {
   Store,
   MapPin,
   CreditCard,
-  ToggleLeft,
+
   Package,
   DollarSign,
   Award,

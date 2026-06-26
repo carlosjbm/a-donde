@@ -428,7 +428,6 @@ export async function update(
 
 export async function deleteProducto(
   id: number,
-  userId: number,
 ): Promise<boolean> {
   const conn = await pool.getConnection();
   try {

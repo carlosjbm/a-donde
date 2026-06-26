@@ -109,7 +109,7 @@ export async function DELETE(
       return errorResponse("Lugar no encontrado", 404);
     }
 
-    const deleted = await productModel.deleteProducto(prodId, auth.userId);
+    const deleted = await productModel.deleteProducto(prodId);
     if (!deleted) return errorResponse("Producto no encontrado", 404);
 
     return successResponse({ deleted: true });
