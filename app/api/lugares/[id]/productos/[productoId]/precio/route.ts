@@ -48,11 +48,10 @@ export async function PUT(
         idUsuario: auth.userId,
         fuente: "manual",
         notas: parsed.data.notas ?? null,
+        activo: parsed.data.activo,
       });
-    }
-
-    if (parsed.data.activo !== undefined) {
-      await productModel.update(idProducto, { activo: parsed.data.activo });
+    } else if (parsed.data.activo !== undefined) {
+      await productModel.updateActivo(idProducto, parsed.data.activo);
     }
 
     return successResponse({

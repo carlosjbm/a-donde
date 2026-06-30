@@ -45,3 +45,6 @@ Configured via `netlify.toml` + `@netlify/plugin-nextjs`.
 - `allowedDevOrigins` configured for LAN access on several IPs
 - `eslint.config.mjs` is flat config (not `.eslintrc`)
 - PostCSS with `@tailwindcss/postcss` (Tailwind v4)
+
+##Skills
+- Project Skills in `/s.agents`

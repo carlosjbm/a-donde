@@ -267,6 +267,7 @@ export interface UpdatePrecioInput {
   idUsuario?: number | null;
   fuente?: ProductoPrecioFuente;
   notas?: string | null;
+  activo?: boolean;
 }
 
 export interface UpdatePrecioResult {
@@ -310,9 +311,15 @@ export async function updatePrecio(
     );
     const newPriceId = insertResult.insertId;
 
+    const precioUpdates = ["precio = ?", "fech_act_precio = NOW()"];
+    const precioUpdateParams: unknown[] = [precio];
+    if (input.activo !== undefined) {
+      precioUpdates.push("activo = ?");
+      precioUpdateParams.push(input.activo);
+    }
     await conn.query(
-      "UPDATE productos SET precio = ?, fech_act_precio = NOW() WHERE id = ?",
-      [precio, idProducto],
+      `UPDATE productos SET ${precioUpdates.join(", ")} WHERE id = ?`,
+      [...precioUpdateParams, idProducto],
     );
 
     await conn.commit();
@@ -419,11 +426,24 @@ export async function update(
   if (fields.length === 0) return findByIdAny(id);
 
   values.push(id);
-  await pool.query(
-    `UPDATE productos SET ${fields.join(", ")}, fech_act_precio = NOW() WHERE id = ?`,
-    values,
-  );
+  let hasPrecio = fields.some((f) => f.startsWith("precio ="));
+  let sql = `UPDATE productos SET ${fields.join(", ")}`;
+  if (hasPrecio) {
+    sql += ", fech_act_precio = NOW()";
+  }
+  sql += " WHERE id = ?";
+  await pool.query(sql, values);
   return findByIdAny(id);
+}
+
+export async function updateActivo(
+  id: number,
+  activo: boolean,
+): Promise<void> {
+  await pool.query(
+    "UPDATE productos SET activo = ? WHERE id = ?",
+    [activo, id],
+  );
 }
 
 export async function deleteProducto(

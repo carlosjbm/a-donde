@@ -58,8 +58,10 @@ export function UpdatePriceModal({
     try {
       const body: Record<string, unknown> = {
         notas: notas.trim() || undefined,
-        activo,
       };
+      if (activo !== producto.activo) {
+        body.activo = activo;
+      }
       if (precio.trim()) {
         body.precio = precioNum;
       }
